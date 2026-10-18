@@ -1,5 +1,15 @@
 import React, { useState } from "react";
 import { registerUser } from "../../services/authApi";
+import {
+  UserIcon,
+  MailIcon,
+  LockIcon,
+  EyeIcon,
+  EyeOffIcon,
+  PhoneIcon,
+  BuildingIcon,
+  ClipboardIcon,
+} from "./LoginIcons";
 
 export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
   const [accountType, setAccountType] = useState("CUSTOMER");
@@ -118,7 +128,9 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
             Full Name <span className="vtx-required">*</span>
           </label>
           <div className="vtx-input-wrapper">
-            <span className="vtx-input-icon" aria-hidden="true">👤</span>
+            <span className="vtx-input-icon" aria-hidden="true">
+              <UserIcon size={18} />
+            </span>
             <input
               id="reg-fullname"
               type="text"
@@ -130,7 +142,7 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
                 if (error) setError(null);
               }}
               disabled={loading}
-              className="vtx-input"
+              className="vtx-input vtx-login-input"
               required
             />
           </div>
@@ -141,7 +153,9 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
             Email Address <span className="vtx-required">*</span>
           </label>
           <div className="vtx-input-wrapper">
-            <span className="vtx-input-icon" aria-hidden="true">✉️</span>
+            <span className="vtx-input-icon" aria-hidden="true">
+              <MailIcon size={18} />
+            </span>
             <input
               id="reg-email"
               type="email"
@@ -153,7 +167,7 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
                 if (error) setError(null);
               }}
               disabled={loading}
-              className="vtx-input"
+              className="vtx-input vtx-login-input"
               required
             />
           </div>
@@ -164,7 +178,9 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
             Password <span className="vtx-required">*</span>
           </label>
           <div className="vtx-input-wrapper">
-            <span className="vtx-input-icon" aria-hidden="true">🔒</span>
+            <span className="vtx-input-icon" aria-hidden="true">
+              <LockIcon size={18} />
+            </span>
             <input
               id="reg-password"
               type={showPassword ? "text" : "password"}
@@ -176,7 +192,7 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
                 if (error) setError(null);
               }}
               disabled={loading}
-              className="vtx-input vtx-input-with-action"
+              className="vtx-input vtx-login-input vtx-input-with-action"
               required
             />
             <button
@@ -186,7 +202,11 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
               aria-label={showPassword ? "Hide password" : "Show password"}
               title={showPassword ? "Hide password" : "Show password"}
             >
-              {showPassword ? "🙈" : "👁️"}
+              {showPassword ? (
+                <EyeOffIcon size={18} />
+              ) : (
+                <EyeIcon size={18} />
+              )}
             </button>
           </div>
         </div>
@@ -196,7 +216,9 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
             Phone Number <span className="vtx-optional">(optional)</span>
           </label>
           <div className="vtx-input-wrapper">
-            <span className="vtx-input-icon" aria-hidden="true">📱</span>
+            <span className="vtx-input-icon" aria-hidden="true">
+              <PhoneIcon size={18} />
+            </span>
             <input
               id="reg-phone"
               type="tel"
@@ -205,7 +227,7 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               disabled={loading}
-              className="vtx-input"
+              className="vtx-input vtx-login-input"
             />
           </div>
         </div>
@@ -217,7 +239,9 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
                 Company / Organization <span className="vtx-required">*</span>
               </label>
               <div className="vtx-input-wrapper">
-                <span className="vtx-input-icon" aria-hidden="true">🏢</span>
+                <span className="vtx-input-icon" aria-hidden="true">
+                  <BuildingIcon size={18} />
+                </span>
                 <input
                   id="reg-company"
                   type="text"
@@ -225,7 +249,7 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   disabled={loading}
-                  className="vtx-input"
+                  className="vtx-input vtx-login-input"
                   required
                 />
               </div>
@@ -236,7 +260,9 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
                 GSTIN <span className="vtx-optional">(for business tax credit)</span>
               </label>
               <div className="vtx-input-wrapper">
-                <span className="vtx-input-icon" aria-hidden="true">📋</span>
+                <span className="vtx-input-icon" aria-hidden="true">
+                  <ClipboardIcon size={18} />
+                </span>
                 <input
                   id="reg-gstin"
                   type="text"
@@ -244,7 +270,7 @@ export default function RegisterStep({ onRegisterSuccess, onBackToLogin }) {
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value.toUpperCase())}
                   disabled={loading}
-                  className="vtx-input vtx-mono-input"
+                  className="vtx-input vtx-login-input vtx-mono-input"
                 />
               </div>
             </div>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { requestPasswordReset } from "../../services/authApi";
+import { MailIcon } from "./LoginIcons";
 
 export default function ForgotPasswordStep({ onBackToLogin }) {
   const [email, setEmail] = useState("");
@@ -61,7 +62,9 @@ export default function ForgotPasswordStep({ onBackToLogin }) {
               Account Email
             </label>
             <div className="vtx-input-wrapper">
-              <span className="vtx-input-icon" aria-hidden="true">✉️</span>
+              <span className="vtx-input-icon" aria-hidden="true">
+                <MailIcon size={18} />
+              </span>
               <input
                 id="reset-email"
                 type="email"
@@ -73,7 +76,7 @@ export default function ForgotPasswordStep({ onBackToLogin }) {
                   if (error) setError(null);
                 }}
                 disabled={loading}
-                className="vtx-input"
+                className="vtx-input vtx-login-input"
                 autoFocus
                 required
               />

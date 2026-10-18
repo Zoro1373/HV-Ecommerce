@@ -236,4 +236,98 @@ describe("VERTEX Redesigned LoginPage Component", () => {
     );
     expect(mockOnNavigateHome).toHaveBeenCalledTimes(1);
   });
+
+  test("9. Handles long email address and long password without layout breaking", () => {
+    render(
+      <LoginPage
+        onLoginSuccess={mockOnLoginSuccess}
+        onNavigateHome={mockOnNavigateHome}
+      />
+    );
+
+    const emailInput = screen.getByTestId("login-email-input");
+    const passwordInput = screen.getByTestId("login-password-input");
+
+    const longEmail = "hardware.procurement.lead.specialist.operations@vertexengineering.co.in";
+    const longPassword = "SuperSecureComplexPassword123456789!@#$%^&*()_+~`";
+
+    // Type long email
+    fireEvent.change(emailInput, { target: { value: longEmail } });
+    expect(emailInput).toHaveValue(longEmail);
+    expect(emailInput).toHaveClass("vtx-input");
+
+    // Type long password
+    fireEvent.change(passwordInput, { target: { value: longPassword } });
+    expect(passwordInput).toHaveValue(longPassword);
+    expect(passwordInput).toHaveClass("vtx-input", "vtx-input-with-action");
+  });
+
+  test("10. Toggles long password visibility preserving typed value and accessible state", () => {
+    render(
+      <LoginPage
+        onLoginSuccess={mockOnLoginSuccess}
+        onNavigateHome={mockOnNavigateHome}
+      />
+    );
+
+    const passwordInput = screen.getByTestId("login-password-input");
+    const toggleButton = screen.getByTestId("login-password-toggle");
+
+    const longPassword = "SuperSecureComplexPassword123456789!@#$%^&*()_+~`";
+    fireEvent.change(passwordInput, { target: { value: longPassword } });
+
+    // Initially masked
+    expect(passwordInput).toHaveAttribute("type", "password");
+    expect(toggleButton).toHaveAttribute("aria-label", "Show password");
+    expect(toggleButton).toHaveAttribute("title", "Show password");
+    expect(toggleButton.querySelector("svg")).toBeInTheDocument();
+
+    // Click to show password
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(passwordInput).toHaveValue(longPassword);
+    expect(toggleButton).toHaveAttribute("aria-label", "Hide password");
+    expect(toggleButton).toHaveAttribute("title", "Hide password");
+    expect(toggleButton.querySelector("svg")).toBeInTheDocument();
+
+    // Click to hide again
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute("type", "password");
+    expect(passwordInput).toHaveValue(longPassword);
+    expect(toggleButton).toHaveAttribute("aria-label", "Show password");
+  });
+
+  test("11. Verifies wrapper, icon aria-hidden, and keyboard focus behavior", () => {
+    render(
+      <LoginPage
+        onLoginSuccess={mockOnLoginSuccess}
+        onNavigateHome={mockOnNavigateHome}
+      />
+    );
+
+    const emailInput = screen.getByTestId("login-email-input");
+    const passwordInput = screen.getByTestId("login-password-input");
+    const toggleButton = screen.getByTestId("login-password-toggle");
+
+    // Verify keyboard focus
+    emailInput.focus();
+    expect(document.activeElement).toBe(emailInput);
+
+    passwordInput.focus();
+    expect(document.activeElement).toBe(passwordInput);
+
+    toggleButton.focus();
+    expect(document.activeElement).toBe(toggleButton);
+
+    // Verify icons are present inside wrappers with aria-hidden="true"
+    const wrappers = document.querySelectorAll(".vtx-input-wrapper");
+    expect(wrappers.length).toBeGreaterThanOrEqual(2);
+
+    wrappers.forEach((wrapper) => {
+      const icon = wrapper.querySelector(".vtx-input-icon");
+      if (icon) {
+        expect(icon).toHaveAttribute("aria-hidden", "true");
+      }
+    });
+  });
 });

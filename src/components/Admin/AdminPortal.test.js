@@ -286,4 +286,138 @@ describe("VERTEX Admin Portal Suite", () => {
       expect(mockNavigateLogin).toHaveBeenCalled();
     });
   });
+
+  test("9. Navigates to Orders section and allows inspecting detailed order breakdown and discount notice", async () => {
+    const mockOrder = {
+      id: "ord-test-01",
+      orderNumber: "VTX-20261018-74192",
+      createdAt: "2026-10-18T10:15:30.000Z",
+      shippingRecipient: "Browser Test Customer",
+      shippingPhone: "+91 9876543210",
+      shippingLine1: "42 Industrial Tech Park, Phase 1",
+      shippingCity: "Bengaluru",
+      shippingState: "Karnataka",
+      shippingPostalCode: "560100",
+      orderStatus: "PENDING",
+      paymentStatus: "PENDING",
+      paymentMethod: "COD",
+      subtotal: 1299.0,
+      taxAmount: 233.82,
+      shippingFee: 0.0,
+      totalAmount: 1532.82,
+      items: [
+        {
+          id: "item-01",
+          productName: "Arduino Uno R3 Microcontroller Board",
+          sku: "ELEC-ARD-UNO-R3",
+          quantity: 1,
+          unitPrice: 1299.0,
+          gstRate: 18.0,
+          taxAmount: 233.82,
+          lineTotal: 1532.82,
+        },
+      ],
+    };
+    adminApi.getAdminOrders.mockResolvedValue({
+      isImplemented: true,
+      orders: [mockOrder],
+      pagination: { totalItems: 1, page: 1, totalPages: 1 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Orders"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Orders & Fulfillment Management/i)).toBeInTheDocument();
+      expect(screen.getByText(/VTX-20261018-74192/i)).toBeInTheDocument();
+    });
+
+    // Click 'Details' button
+    const detailBtns = screen.getAllByRole("button", { name: /Details/i });
+    fireEvent.click(detailBtns[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/A. Order Summary & Fulfillment Tracking/i)).toBeInTheDocument();
+      expect(screen.getByText(/B. Order Items Snapshot/i)).toBeInTheDocument();
+      expect(screen.getByText(/C. Authoritative Price & Discount Breakdown/i)).toBeInTheDocument();
+      expect(screen.getByText(/Backend Discount Adjustment Capability Gap/i)).toBeInTheDocument();
+    });
+
+    // Close modal
+    fireEvent.click(screen.getByRole("button", { name: /Close Order Details/i }));
+  });
+
+  test("10. Navigates to Discounts section and verifies read-only architecture roadmap preview", async () => {
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Discounts & Promos"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Discounts & Promotions Management/i)).toBeInTheDocument();
+      expect(screen.getByText(/VTX-IND-BULK10/i)).toBeInTheDocument();
+      expect(screen.getByText(/Backend Architecture Roadmap Notice/i)).toBeInTheDocument();
+    });
+  });
+
+  test("11. Navigates to Refunds section and verifies financial safety gateway boundary notice", async () => {
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Refunds & Returns"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Refunds & Returns Operations/i)).toBeInTheDocument();
+      expect(screen.getByText(/Financial Boundary & Non-Operational Notice/i)).toBeInTheDocument();
+      expect(screen.getByText(/REF-2026-001/i)).toBeInTheDocument();
+    });
+  });
+
+  test("12. Navigates to Reviews section and verifies moderation standards and roadmap state", async () => {
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Product Reviews"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Product Reviews & Ratings Moderation/i)).toBeInTheDocument();
+      expect(screen.getByText(/Review Moderation Standards/i)).toBeInTheDocument();
+      expect(screen.getByText(/REV-101/i)).toBeInTheDocument();
+    });
+  });
+
+  test("13. Operational Order Monitoring KPI grid renders interactive summary tiles and refresh action", async () => {
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Operational Order Monitoring Dashboard/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Pending Review/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dispatched/i)).toBeInTheDocument();
+    expect(screen.getByText(/Refund Requests/i)).toBeInTheDocument();
+
+    // Verify manual refresh action
+    const refreshBtn = screen.getByTestId("refresh-telemetry-btn");
+    expect(refreshBtn).toBeInTheDocument();
+    fireEvent.click(refreshBtn);
+    await waitFor(() => {
+      expect(screen.getByText(/↻ Refresh Telemetry/i)).toBeInTheDocument();
+    });
+  });
 });
+

@@ -5,6 +5,7 @@ import MfaStep from "./MfaStep";
 import ForgotPasswordStep from "./ForgotPasswordStep";
 import RegisterStep from "./RegisterStep";
 import { loginUser } from "../../services/authApi";
+import { MailIcon, LockIcon, EyeIcon, EyeOffIcon } from "./LoginIcons";
 import "./LoginPage.css";
 
 export default function LoginPage({
@@ -260,9 +261,12 @@ export default function LoginPage({
                         Email Address
                       </label>
                       <div className="vtx-input-wrapper">
-                        <span className="vtx-input-icon" aria-hidden="true">✉️</span>
+                        <span className="vtx-input-icon" aria-hidden="true">
+                          <MailIcon size={18} />
+                        </span>
                         <input
                           id="login-email"
+                          data-testid="login-email-input"
                           type="email"
                           autoComplete="email"
                           placeholder="engineer@vertex.in"
@@ -272,7 +276,7 @@ export default function LoginPage({
                             if (error) setError(null);
                           }}
                           disabled={loading}
-                          className="vtx-input"
+                          className="vtx-input vtx-login-input"
                           aria-describedby={error ? "login-error-alert" : undefined}
                           autoFocus
                           required
@@ -298,9 +302,12 @@ export default function LoginPage({
                         </button>
                       </div>
                       <div className="vtx-input-wrapper">
-                        <span className="vtx-input-icon" aria-hidden="true">🔒</span>
+                        <span className="vtx-input-icon" aria-hidden="true">
+                          <LockIcon size={18} />
+                        </span>
                         <input
                           id="login-password"
+                          data-testid="login-password-input"
                           type={showPassword ? "text" : "password"}
                           autoComplete="current-password"
                           placeholder="••••••••"
@@ -310,17 +317,22 @@ export default function LoginPage({
                             if (error) setError(null);
                           }}
                           disabled={loading}
-                          className="vtx-input vtx-input-with-action"
+                          className="vtx-input vtx-login-input vtx-input-with-action"
                           required
                         />
                         <button
                           type="button"
+                          data-testid="login-password-toggle"
                           className="vtx-input-action-btn"
                           onClick={() => setShowPassword((prev) => !prev)}
                           aria-label={showPassword ? "Hide password" : "Show password"}
                           title={showPassword ? "Hide password" : "Show password"}
                         >
-                          {showPassword ? "🙈" : "👁️"}
+                          {showPassword ? (
+                            <EyeOffIcon size={18} />
+                          ) : (
+                            <EyeIcon size={18} />
+                          )}
                         </button>
                       </div>
                     </div>

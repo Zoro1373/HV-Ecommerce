@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { verifyMfaLogin } from "../../services/authApi";
+import { KeypadIcon, KeyIcon } from "./LoginIcons";
 
 export default function MfaStep({
   mfaChallengeToken,
@@ -94,7 +95,9 @@ export default function MfaStep({
               6-Digit Security Code
             </label>
             <div className="vtx-input-wrapper">
-              <span className="vtx-input-icon" aria-hidden="true">🔢</span>
+              <span className="vtx-input-icon" aria-hidden="true">
+                <KeypadIcon size={18} />
+              </span>
               <input
                 id="mfa-totp-code"
                 type="text"
@@ -105,7 +108,7 @@ export default function MfaStep({
                 value={code}
                 onChange={handleCodeChange}
                 disabled={loading}
-                className="vtx-input vtx-totp-input"
+                className="vtx-input vtx-login-input vtx-totp-input"
                 autoFocus
                 required
               />
@@ -118,7 +121,9 @@ export default function MfaStep({
               Emergency Recovery Code
             </label>
             <div className="vtx-input-wrapper">
-              <span className="vtx-input-icon" aria-hidden="true">🔑</span>
+              <span className="vtx-input-icon" aria-hidden="true">
+                <KeyIcon size={18} />
+              </span>
               <input
                 id="mfa-recovery-code"
                 type="text"
@@ -126,7 +131,7 @@ export default function MfaStep({
                 value={recoveryCode}
                 onChange={handleRecoveryChange}
                 disabled={loading}
-                className="vtx-input vtx-recovery-input"
+                className="vtx-input vtx-login-input vtx-recovery-input"
                 autoFocus
                 required
               />

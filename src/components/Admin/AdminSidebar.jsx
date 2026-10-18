@@ -1,17 +1,35 @@
 import React from "react";
 import logo from "../../assets/logo.png";
 
-const navSections = [
-  { id: "dashboard", label: "Dashboard", icon: "📊" },
-  { id: "products", label: "Products", icon: "📦" },
-  { id: "categories", label: "Categories", icon: "🏷️" },
-  { id: "inventory", label: "Inventory", icon: "📋" },
-  { id: "orders", label: "Orders", icon: "🚚", badge: "Phase 6" },
-  { id: "customers", label: "Customers", icon: "👥" },
-  { id: "reports", label: "Reports & Analytics", icon: "📈" },
-  { id: "users", label: "Admin Users & Roles", icon: "🛡️" },
-  { id: "settings", label: "Settings", icon: "⚙️" },
-  { id: "audit-logs", label: "Audit Log", icon: "📜" },
+const navGroups = [
+  {
+    groupTitle: "Operations & Orders",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: "📊" },
+      { id: "orders", label: "Orders", icon: "🚚", badge: "Phase 6" },
+      { id: "refunds", label: "Refunds & Returns", icon: "↩️", badge: "Pending Gateway" },
+      { id: "discounts", label: "Discounts & Promos", icon: "🏷️", badge: "Roadmap" },
+      { id: "reviews", label: "Product Reviews", icon: "⭐", badge: "Roadmap" },
+    ],
+  },
+  {
+    groupTitle: "Catalog & Stock",
+    items: [
+      { id: "products", label: "Products", icon: "📦" },
+      { id: "categories", label: "Categories", icon: "📑" },
+      { id: "inventory", label: "Inventory", icon: "📋" },
+    ],
+  },
+  {
+    groupTitle: "Management & Governance",
+    items: [
+      { id: "customers", label: "Customers", icon: "👥" },
+      { id: "reports", label: "Reports & Analytics", icon: "📈" },
+      { id: "users", label: "Admin Users & Roles", icon: "🛡️" },
+      { id: "settings", label: "Settings", icon: "⚙️" },
+      { id: "audit-logs", label: "Audit Log", icon: "📜" },
+    ],
+  },
 ];
 
 export default function AdminSidebar({
@@ -67,39 +85,48 @@ export default function AdminSidebar({
           </button>
         </div>
 
-        <ul className="adm-nav-list" role="navigation">
-          {navSections.map((item) => {
-            const isActive = activeSection === item.id;
-            return (
-              <li
-                key={item.id}
-                className={`adm-nav-item ${isActive ? "active" : ""}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectSection(item.id);
-                    if (mobileOpen) onCloseMobile();
-                  }}
-                  title={item.label}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  <span className="adm-nav-icon" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  {!collapsed && (
-                    <>
-                      <span className="adm-nav-label">{item.label}</span>
-                      {item.badge && (
-                        <span className="adm-nav-badge">{item.badge}</span>
-                      )}
-                    </>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <nav className="adm-sidebar-nav" role="navigation">
+          {navGroups.map((group) => (
+            <div key={group.groupTitle} className="adm-nav-group">
+              {!collapsed && (
+                <div className="adm-nav-group-title">{group.groupTitle}</div>
+              )}
+              <ul className="adm-nav-list">
+                {group.items.map((item) => {
+                  const isActive = activeSection === item.id;
+                  return (
+                    <li
+                      key={item.id}
+                      className={`adm-nav-item ${isActive ? "active" : ""}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectSection(item.id);
+                          if (mobileOpen) onCloseMobile();
+                        }}
+                        title={item.label}
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        <span className="adm-nav-icon" aria-hidden="true">
+                          {item.icon}
+                        </span>
+                        {!collapsed && (
+                          <>
+                            <span className="adm-nav-label">{item.label}</span>
+                            {item.badge && (
+                              <span className="adm-nav-badge">{item.badge}</span>
+                            )}
+                          </>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
 
         <div className="adm-sidebar-footer">
           <button
@@ -120,10 +147,10 @@ export default function AdminSidebar({
                 }`}
                 aria-hidden="true"
               />
-              <span>
-                {healthStatus?.database?.connected
+              <span className="adm-status-text">
+                {healthStatus?.status === "UP"
                   ? "PostgreSQL 18.6 Live"
-                  : "Database Checking..."}
+                  : "Database Disconnected"}
               </span>
             </div>
           )}

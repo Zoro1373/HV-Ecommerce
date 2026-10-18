@@ -8,6 +8,9 @@ import { checkDatabaseConnection } from "./config/db.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { categoryRouter } from "./routes/category.routes.js";
 import { productRouter } from "./routes/product.routes.js";
+import { cartRouter } from "./routes/cart.routes.js";
+import { addressRouter } from "./routes/address.routes.js";
+import { orderRouter } from "./routes/order.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
 
 import { getTrustedOrigins, getCanonicalOrigin } from "./middleware/auth.middleware.js";
@@ -69,6 +72,13 @@ app.use("/api/products", productRouter);
 
 // Authentication routes
 app.use("/api/auth", authRouter);
+
+// Shopping cart routes
+app.use("/api/cart", cartRouter);
+
+// Customer addresses & checkout order routes
+app.use("/api/addresses", addressRouter);
+app.use("/api/orders", orderRouter);
 
 // Administrative routes
 app.use("/api/admin", adminRouter);

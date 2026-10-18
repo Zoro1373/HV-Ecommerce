@@ -403,10 +403,12 @@
 /* --------------------------------------------------------------------------
    Form Controls & Inputs
    -------------------------------------------------------------------------- */
+.vtx-login-page .vtx-input-group,
 .vtx-input-group {
   margin-bottom: 18px;
 }
 
+.vtx-login-page .vtx-label-row,
 .vtx-label-row {
   display: flex;
   justify-content: space-between;
@@ -414,6 +416,7 @@
   margin-bottom: 6px;
 }
 
+.vtx-login-page .vtx-label,
 .vtx-label {
   display: block;
   font-size: 0.86rem;
@@ -422,84 +425,159 @@
   margin-bottom: 6px;
 }
 
+.vtx-login-page .vtx-required,
 .vtx-required {
   color: #dc2626;
 }
 
+.vtx-login-page .vtx-optional,
 .vtx-optional {
   font-size: 0.78rem;
   color: #94a3b8;
   font-weight: 400;
 }
 
+/* Dedicated Input Wrapper */
+.vtx-login-page .vtx-input-wrapper,
 .vtx-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
+/* Independent, Abs-Positioned Left Icon */
+.vtx-login-page .vtx-input-icon,
 .vtx-input-icon {
   position: absolute;
-  left: 12px;
-  font-size: 1rem;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #94a3b8;
   pointer-events: none;
   z-index: 2;
+  user-select: none;
+  box-sizing: border-box;
 }
 
-.vtx-input {
+.vtx-login-page .vtx-input-icon svg,
+.vtx-login-page .vtx-input-icon .vtx-icon,
+.vtx-input-icon svg,
+.vtx-input-icon .vtx-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  stroke: #94a3b8;
+}
+
+/* Bulletproof Input Styling: overrides any global .vtx-input */
+.vtx-login-page .vtx-input,
+.vtx-login-page input.vtx-login-input,
+.vtx-login-input {
   width: 100%;
-  height: 44px;
-  padding: 10px 14px 10px 38px;
+  height: 48px;
+  padding: 10px 16px 10px 46px !important;
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
   border-radius: 8px;
   font-size: 0.95rem;
+  line-height: 1.5;
   color: #0f172a;
-  transition: all 0.15s ease;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
   font-family: inherit;
 }
 
-.vtx-input::placeholder {
+.vtx-login-page .vtx-input::placeholder,
+.vtx-login-page input.vtx-login-input::placeholder,
+.vtx-login-input::placeholder {
   color: #94a3b8;
 }
 
-.vtx-input:focus {
+.vtx-login-page .vtx-input:focus,
+.vtx-login-page input.vtx-login-input:focus,
+.vtx-login-input:focus {
   outline: none;
   border-color: #0284c7;
   box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
 }
 
-.vtx-input-with-action {
-  padding-right: 44px;
+.vtx-login-page .vtx-input:disabled,
+.vtx-login-page input.vtx-login-input:disabled,
+.vtx-login-input:disabled {
+  background-color: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
 }
 
+/* Password input with visibility button: reserve 50px on right */
+.vtx-login-page .vtx-input.vtx-input-with-action,
+.vtx-login-page input.vtx-login-input.vtx-input-with-action,
+.vtx-login-page .vtx-input-with-action,
+.vtx-login-input.vtx-input-with-action {
+  padding-left: 46px !important;
+  padding-right: 50px !important;
+}
+
+/* Dedicated Action Button (Password Toggle) */
+.vtx-login-page .vtx-input-action-btn,
 .vtx-input-action-btn {
   position: absolute;
-  right: 6px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
   border: none;
   color: #64748b;
-  width: 32px;
-  height: 32px;
-  display: flex;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 1rem;
-  transition: background 0.15s ease;
+  z-index: 3;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+.vtx-login-page .vtx-input-action-btn svg,
+.vtx-login-page .vtx-input-action-btn .vtx-icon,
+.vtx-input-action-btn svg,
+.vtx-input-action-btn .vtx-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  stroke: #64748b;
+  transition: stroke 0.15s ease;
+}
+
+.vtx-login-page .vtx-input-action-btn:hover,
 .vtx-input-action-btn:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
 
+.vtx-login-page .vtx-input-action-btn:hover svg,
+.vtx-input-action-btn:hover svg {
+  stroke: #0f172a;
+}
+
+.vtx-login-page .vtx-input-action-btn:focus-visible,
 .vtx-input-action-btn:focus-visible {
   outline: 2px solid #0284c7;
+  outline-offset: 1px;
 }
 
 .vtx-input-help {
@@ -514,7 +592,8 @@
   font-size: 1.4rem;
   letter-spacing: 0.35em;
   text-align: center;
-  padding-left: 14px;
+  padding-left: 44px;
+  padding-right: 44px;
   font-weight: 700;
 }
 
@@ -523,11 +602,13 @@
   font-size: 1.15rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
+  padding-left: 44px;
 }
 
 .vtx-mono-input {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.92rem;
+  padding-left: 44px;
 }
 
 /* --------------------------------------------------------------------------
@@ -909,5 +990,57 @@
   }
   .vtx-security-badge {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .vtx-login-topbar {
+    padding: 10px 14px;
+  }
+  .vtx-login-main {
+    padding: 16px 12px 32px;
+  }
+  .vtx-card-header {
+    padding: 18px 16px 14px;
+  }
+  .vtx-card-body {
+    padding: 20px 16px;
+  }
+  .vtx-form-title {
+    font-size: 1.25rem;
+  }
+  .vtx-form-sub {
+    font-size: 0.88rem;
+    margin-bottom: 18px;
+  }
+  .vtx-login-page .vtx-input,
+  .vtx-login-page input.vtx-login-input,
+  .vtx-login-input {
+    height: 44px;
+    font-size: 0.92rem;
+    padding-left: 44px !important;
+  }
+  .vtx-login-page .vtx-input.vtx-input-with-action,
+  .vtx-login-page input.vtx-login-input.vtx-input-with-action,
+  .vtx-login-page .vtx-input-with-action,
+  .vtx-login-input.vtx-input-with-action {
+    padding-left: 44px !important;
+    padding-right: 48px !important;
+  }
+  .vtx-login-page .vtx-input-icon,
+  .vtx-input-icon {
+    left: 12px;
+    width: 20px;
+    height: 20px;
+  }
+  .vtx-login-page .vtx-input-action-btn,
+  .vtx-input-action-btn {
+    right: 6px;
+    width: 32px;
+    height: 32px;
+  }
+  .vtx-trust-badges {
+    gap: 6px;
+    font-size: 0.72rem;
   }
 }
