@@ -1,0 +1,231 @@
+/* ==============================================================================
+   VERTEX Hardware Background Carousel Styles
+   Scoped specifically to .vtx-hw-bg-container
+   ============================================================================== */
+
+.vtx-hw-bg-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 0;
+  background-color: #071326;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Technical Blueprint Grid Fallback (active if images are offline/loading) */
+.vtx-hw-grid-fallback {
+  position: absolute;
+  inset: 0;
+  background-color: #061224;
+  background-image: 
+    linear-gradient(rgba(14, 165, 233, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.06) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 30%, rgba(14, 165, 233, 0.12) 0%, transparent 70%);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  z-index: 1;
+}
+
+/* Individual Slide Container */
+.vtx-hw-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 2;
+  transform: scale(1.04);
+  will-change: opacity, transform;
+}
+
+.vtx-hw-slide.active {
+  opacity: 1;
+  z-index: 3;
+  transform: scale(1.0);
+}
+
+.vtx-hw-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+  display: block;
+  filter: brightness(0.85) contrast(1.08) saturate(1.05);
+}
+
+/* Multi-layered Dark Navy Translucent Gradient Overlays */
+.vtx-hw-overlay-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(6, 17, 34, 0.92) 0%,
+    rgba(8, 24, 49, 0.82) 40%,
+    rgba(5, 14, 28, 0.94) 100%
+  );
+  z-index: 4;
+}
+
+.vtx-hw-overlay-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    transparent 20%,
+    rgba(3, 10, 20, 0.6) 80%,
+    rgba(2, 6, 14, 0.9) 100%
+  );
+  z-index: 5;
+}
+
+.vtx-hw-overlay-mesh {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    rgba(14, 165, 233, 0.08) 1px,
+    transparent 1px
+  );
+  background-size: 32px 32px;
+  opacity: 0.7;
+  z-index: 6;
+}
+
+/* Subtle Technical Caption Bar at the Bottom */
+.vtx-hw-caption-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  background: linear-gradient(to top, rgba(3, 10, 22, 0.95), rgba(3, 10, 22, 0));
+  pointer-events: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vtx-hw-caption-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vtx-hw-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  color: #38bdf8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+}
+
+.vtx-hw-title {
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: 0.01em;
+}
+
+.vtx-hw-divider {
+  color: #475569;
+}
+
+.vtx-hw-subtitle {
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* Carousel Indicators and Controls */
+.vtx-hw-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.vtx-hw-control-btn {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.vtx-hw-control-btn:hover {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(14, 165, 233, 0.15);
+}
+
+.vtx-hw-dot {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.vtx-hw-dot-fill {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vtx-hw-dot.active .vtx-hw-dot-fill {
+  width: 24px;
+  background: #0284c7;
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.6);
+}
+
+.vtx-hw-dot:hover .vtx-hw-dot-fill {
+  background: rgba(56, 189, 248, 0.8);
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .vtx-hw-slide {
+    transition: none !important;
+    transform: none !important;
+  }
+  .vtx-hw-dot-fill {
+    transition: none !important;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .vtx-hw-subtitle,
+  .vtx-hw-divider {
+    display: none;
+  }
+  .vtx-hw-caption-bar {
+    padding: 10px 16px;
+  }
+}
