@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import logo from "./assets/logo.png";
+import arduinoImg from "./assets/hardware/arduino.jpg";
 import LoginPage from "./components/Login/LoginPage";
 import AdminLayout from "./components/Admin/AdminLayout";
 import CartDrawer from "./components/Cart/CartDrawer";
@@ -23,6 +24,8 @@ import {
   removeGuestItem,
   clearGuestCart,
 } from "./utils/guestCart";
+import { isMockApiEnabled, setMockMode } from "./mock/mockConfig";
+import { MOCK_USERS } from "./mock/mockData";
 import "./App.css";
 
 const topBarItems = [
@@ -86,16 +89,17 @@ function Stars({ rating }) {
   );
 }
 
-function ProductCard({ product, onAddToCart, isAdding = false }) {
+function ProductCard({ product, onAddToCart, onViewDetails, isAdding = false }) {
   const [imgError, setImgError] = useState(false);
   const primaryVariant = product.variants?.[0];
   const unitLabel = primaryVariant?.packSize || product.unit || null;
   const ratingValue = product.rating || 5;
   const reviewCount = product.reviews || (product.variants?.length ? 24 : 12);
   const inStock = product.inStock !== false && primaryVariant?.stockQuantity !== 0;
+  const skuCode = primaryVariant?.sku || product.sku || (product.slug ? `VTX-${product.slug.toUpperCase()}` : "VTX-GEN-SKU");
 
   return (
-    <div className="product-card" data-testid={`product-card-${product.id || product.slug}`}>
+    <div className="product-card vtx-reveal" data-testid={`product-card-${product.id || product.slug}`}>
       {product.tag && (
         <span
           className={
@@ -121,7 +125,10 @@ function ProductCard({ product, onAddToCart, isAdding = false }) {
         )}
       </div>
       <div className="product-body">
-        <p className="product-name">{product.name}</p>
+        <div className="product-sku" title={`SKU: ${skuCode}`}>
+          <span className="sku-label">SKU:</span> <code className="sku-code">{skuCode}</code>
+        </div>
+        <p className="product-name" title={product.name}>{product.name}</p>
         <div className="product-price-row">
           <span className="price">₹{Number(product.price || 0).toLocaleString("en-IN")}</span>
           {product.mrp && Number(product.mrp) > Number(product.price) && (
@@ -137,17 +144,90 @@ function ProductCard({ product, onAddToCart, isAdding = false }) {
           <span className={"stock-dot" + (!inStock ? " stock-out" : "")} />{" "}
           {inStock ? "In Stock" : "Out of Stock"}
         </p>
-        <button
-          type="button"
-          className="btn btn-outline btn-cart"
-          onClick={() => onAddToCart && onAddToCart(product, primaryVariant)}
-          disabled={!inStock || isAdding}
-          data-testid={`add-to-cart-${product.id || product.slug}`}
-        >
-          {isAdding ? "Adding..." : "🛒 Add to Cart"}
-        </button>
+        <div className="product-actions-row">
+          {onViewDetails && (
+            <button
+              type="button"
+              className="btn btn-outline btn-specs"
+              onClick={() => onViewDetails(product)}
+              title="View Technical Specs"
+            >
+              Specs
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-outline btn-cart"
+            onClick={() => onAddToCart && onAddToCart(product, primaryVariant)}
+            disabled={!inStock || isAdding}
+            data-testid={`add-to-cart-${product.id || product.slug}`}
+          >
+            {isAdding ? "Adding..." : "🛒 Add to Cart"}
+          </button>
+        </div>
       </div>
     </div>
+  );
+}
+
+function MockDevBanner({ currentUser, currentView, onSimulateUser, onToggleMock, onNavigate }) {
+  if (!isMockApiEnabled()) return null;
+
+  return (
+    <aside className="mock-dev-banner" data-testid="mock-dev-banner" aria-label="Development mock API indicator">
+      <div className="mock-dev-banner-left">
+        <span className="mock-dev-tag">⚡ Mock Dev Mode</span>
+        <span className="mock-dev-desc">
+          Neon DB &amp; Backend Bypassed • Local UI Development Active
+        </span>
+      </div>
+      <div className="mock-dev-controls">
+        <span className="mock-dev-label">Simulate:</span>
+        <button
+          type="button"
+          className={`mock-dev-btn ${!currentUser ? "is-active" : ""}`}
+          onClick={() => onSimulateUser(null)}
+          title="Simulate Guest Visitor session"
+        >
+          Guest
+        </button>
+        <button
+          type="button"
+          className={`mock-dev-btn ${currentUser?.role === "CUSTOMER" ? "is-active" : ""}`}
+          onClick={() => onSimulateUser("customer")}
+          title="Simulate Customer session"
+        >
+          Customer
+        </button>
+        <button
+          type="button"
+          className={`mock-dev-btn ${currentUser?.role === "ADMIN" ? "is-active" : ""}`}
+          onClick={() => onSimulateUser("admin")}
+          title="Simulate Admin session and open Admin Portal directly"
+          data-testid="mock-admin-btn"
+        >
+          Admin
+        </button>
+        {currentView === "admin" && (
+          <button
+            type="button"
+            className="mock-dev-btn mock-dev-btn-storefront"
+            onClick={() => onNavigate && onNavigate("home")}
+            title="Return to Customer Storefront"
+          >
+            ← Storefront
+          </button>
+        )}
+        <button
+          type="button"
+          className="mock-dev-btn mock-dev-btn-toggle"
+          onClick={onToggleMock}
+          title="Disable mock mode and switch to Real Backend"
+        >
+          Disable Mock
+        </button>
+      </div>
+    </aside>
   );
 }
 
@@ -191,10 +271,34 @@ export default function App() {
   const [activeSearch, setActiveSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isOffersOnly, setIsOffersOnly] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Newsletter state
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+
+  // Technical Product Specification Modal state
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Micro-interaction: Animated cart badge on item addition
+  const [cartBadgeBumped, setCartBadgeBumped] = useState(false);
+
+  // Close mobile drawer on Escape key and lock body scroll
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    if (mobileMenuOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     // Check initial authentication status via secure HttpOnly cookie
@@ -216,6 +320,7 @@ export default function App() {
 
     // Handle browser back/forward buttons
     const handlePopState = () => {
+      setMobileMenuOpen(false);
       if (window.location.pathname.startsWith("/admin")) {
         const sec = window.location.pathname.replace("/admin/", "").split("/")[0] || "dashboard";
         setAdminSection(sec);
@@ -276,7 +381,61 @@ export default function App() {
     loadProducts();
   }, [loadProducts]);
 
+  // Scroll-triggered reveals with fail-safe visibility and prefers-reduced-motion check
+  useEffect(() => {
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      return;
+    }
+
+    try {
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      if (mediaQuery.matches) {
+        return;
+      }
+    } catch (e) {
+      // Ignore if matchMedia is unsupported
+    }
+
+    const observerCallback = (entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-revealed");
+          observer.unobserve(entry.target);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, {
+      root: null,
+      rootMargin: "0px 0px -40px 0px",
+      threshold: 0.1,
+    });
+
+    // Mark document container so CSS reveal rules engage
+    const pageEl = document.querySelector(".page");
+    if (pageEl) {
+      pageEl.classList.add("vtx-observer-ready");
+    }
+
+    // Observe reveal targets
+    const elements = document.querySelectorAll(".vtx-reveal:not(.is-revealed)");
+    elements.forEach((el) => observer.observe(el));
+
+    // Fail-safe timeout: ensure all content becomes visible even if observer fails or stalls
+    const safetyTimer = setTimeout(() => {
+      document.querySelectorAll(".vtx-reveal:not(.is-revealed)").forEach((el) => {
+        el.classList.add("is-revealed");
+      });
+    }, 1200);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(safetyTimer);
+    };
+  }, [products, categories, currentView]);
+
   const navigate = (view, section = "dashboard", redirectParam = null) => {
+    setMobileMenuOpen(false);
     setCurrentView(view);
     let targetPath = "/";
     if (view === "login") {
@@ -395,6 +554,8 @@ export default function App() {
         setCart(updatedCart);
       }
       setFlashMessage(`Added "${product.name}" to your cart.`);
+      setCartBadgeBumped(true);
+      setTimeout(() => setCartBadgeBumped(false), 550);
     } catch (err) {
       setCartError(err.message || "Failed to add item to cart.");
     } finally {
@@ -508,6 +669,21 @@ export default function App() {
     setIsOffersOnly(false);
   };
 
+  const handleExploreProducts = () => {
+    handleClearAllFilters();
+    const prodSection = document.getElementById("featured-products");
+    if (prodSection && typeof prodSection.scrollIntoView === "function") {
+      prodSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleScrollToCategories = () => {
+    const catSection = document.getElementById("shop-categories");
+    if (catSection && typeof catSection.scrollIntoView === "function") {
+      catSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   const handleCategorySelect = (categorySlug) => {
     setSelectedCategory(categorySlug);
     setIsOffersOnly(false);
@@ -534,29 +710,93 @@ export default function App() {
     if (email.trim()) setSubscribed(true);
   };
 
+  const handleSimulateUser = (role) => {
+    if (!role) {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.removeItem("vertex_mock_user");
+      }
+      setCurrentUser(null);
+      setCart(formatGuestCart(getStoredGuestItems()));
+      setFlashMessage("Simulated session: Guest visitor");
+      if (currentView === "admin") {
+        navigate("home");
+      }
+    } else if (role === "admin") {
+      const admin = { ...MOCK_USERS.admin };
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("vertex_mock_user", JSON.stringify(admin));
+      }
+      setCurrentUser(admin);
+      setFlashMessage("Simulated session: Chief Engineer (ADMIN) • Opening Admin Portal");
+      navigate("admin", "dashboard");
+    } else if (role === "customer") {
+      const cust = { ...MOCK_USERS.customer };
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("vertex_mock_user", JSON.stringify(cust));
+      }
+      setCurrentUser(cust);
+      setFlashMessage("Simulated session: Jane Customer (CUSTOMER)");
+      if (currentView === "admin") {
+        navigate("home");
+      }
+    }
+  };
+
+  const handleToggleMockMode = () => {
+    setMockMode(false);
+    if (typeof window !== "undefined") {
+      window.location.href = window.location.pathname;
+    }
+  };
+
   if (currentView === "admin") {
     return (
-      <AdminLayout
-        currentUser={currentUser}
-        onNavigateHome={() => navigate("home")}
-        onNavigateLogin={(destination) => navigate("login", null, destination || "/admin")}
-        initialSection={adminSection}
-      />
+      <>
+        <MockDevBanner
+          currentUser={currentUser}
+          currentView={currentView}
+          onSimulateUser={handleSimulateUser}
+          onToggleMock={handleToggleMockMode}
+          onNavigate={navigate}
+        />
+        <AdminLayout
+          currentUser={currentUser}
+          onNavigateHome={() => navigate("home")}
+          onNavigateLogin={(destination) => navigate("login", null, destination || "/admin")}
+          initialSection={adminSection}
+        />
+      </>
     );
   }
 
   if (currentView === "login") {
     return (
-      <LoginPage
-        onLoginSuccess={handleLoginSuccess}
-        onNavigateHome={() => navigate("home")}
-      />
+      <>
+        <MockDevBanner
+          currentUser={currentUser}
+          currentView={currentView}
+          onSimulateUser={handleSimulateUser}
+          onToggleMock={handleToggleMockMode}
+          onNavigate={navigate}
+        />
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          onNavigateHome={() => navigate("home")}
+        />
+      </>
     );
   }
 
   if (currentView === "checkout") {
     return (
       <div className="page">
+        <MockDevBanner
+          currentUser={currentUser}
+          currentView={currentView}
+          onSimulateUser={handleSimulateUser}
+          onToggleMock={handleToggleMockMode}
+          onNavigate={navigate}
+        />
         {/* Top utility bar */}
         <div className="top-bar">
           <div className="top-bar-inner">
@@ -657,6 +897,13 @@ export default function App() {
 
   return (
     <div className="page">
+      <MockDevBanner
+        currentUser={currentUser}
+        currentView={currentView}
+        onSimulateUser={handleSimulateUser}
+        onToggleMock={handleToggleMockMode}
+        onNavigate={navigate}
+      />
       {/* Flash status banner */}
       {flashMessage && (
         <div className="vtx-flash-banner" role="status">
@@ -675,25 +922,45 @@ export default function App() {
       {/* Top utility bar */}
       <div className="top-bar">
         <div className="top-bar-inner">
-          {topBarItems.map((item) => (
-            <span className="top-bar-item" key={item.label}>
-              <span className="top-bar-icon" aria-hidden="true">
-                {item.icon}
+          <div className="top-bar-features">
+            {topBarItems.map((item) => (
+              <span className="top-bar-item" key={item.label}>
+                <span className="top-bar-icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+                {item.label}
               </span>
-              {item.label}
-            </span>
-          ))}
+            ))}
+          </div>
+          <div className="top-bar-badge" aria-hidden="true">
+            <span>⚡ Certified Hardware &amp; Fasteners</span>
+          </div>
         </div>
       </div>
 
       {/* Header */}
       <header className="header">
         <div className="header-inner">
+          {/* Mobile hamburger menu button */}
+          <button
+            type="button"
+            className={`vtx-hamburger-btn ${mobileMenuOpen ? "is-open" : ""}`}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-drawer"
+          >
+            <span className="vtx-hamburger-line" aria-hidden="true" />
+            <span className="vtx-hamburger-line" aria-hidden="true" />
+            <span className="vtx-hamburger-line" aria-hidden="true" />
+          </button>
+
           <div
             className="brand"
             onClick={() => {
               navigate("home");
               handleClearAllFilters();
+              setMobileMenuOpen(false);
             }}
             style={{ cursor: "pointer" }}
           >
@@ -709,6 +976,7 @@ export default function App() {
             className="search-bar"
             role="search"
           >
+            <span className="search-icon-prefix" aria-hidden="true">🔍</span>
             <input
               type="text"
               placeholder="Search for electronics, screws, nuts, part numbers..."
@@ -716,7 +984,22 @@ export default function App() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
-            <button type="submit" aria-label="Search">🔍</button>
+            {searchInput && (
+              <button
+                type="button"
+                className="btn-search-clear"
+                onClick={() => {
+                  setSearchInput("");
+                  setActiveSearch("");
+                }}
+                aria-label="Clear"
+              >
+                ✕
+              </button>
+            )}
+            <button type="submit" aria-label="Search" className="btn-search-submit">
+              Search
+            </button>
           </form>
 
           <div className="header-actions">
@@ -765,91 +1048,294 @@ export default function App() {
               data-testid="cart-button"
             >
               <span aria-hidden="true">🛒</span> Cart
-              <span className="cart-badge" data-testid="cart-badge">
+              <span
+                className={`cart-badge${cartBadgeBumped ? " is-bumped" : ""}`}
+                data-testid="cart-badge"
+              >
                 {cart?.totalQuantity || 0}
               </span>
             </button>
           </div>
         </div>
 
+        {/* Desktop Navigation bar */}
         <nav className="nav-bar" aria-label="Main store navigation">
-          {navItems.map((item, i) => {
-            const handleNavClick = (e) => {
-              e.preventDefault();
-              if (item === "Home") {
-                handleClearAllFilters();
-              } else if (item === "Electronics") {
-                handleCategorySelect("electronics");
-              } else if (item === "Screws & Fasteners") {
-                handleCategorySelect("fasteners");
-              } else if (item === "Nuts") {
-                handleCategorySelect("nuts");
-              } else if (item === "Offers") {
-                setIsOffersOnly(true);
-                const prodSection = document.getElementById("featured-products");
-                if (prodSection && typeof prodSection.scrollIntoView === "function") {
-                  prodSection.scrollIntoView({ behavior: "smooth" });
+          <div className="nav-bar-inner">
+            {navItems.map((item) => {
+              const handleNavClick = (e) => {
+                e.preventDefault();
+                if (item === "Home") {
+                  handleClearAllFilters();
+                } else if (item === "Electronics") {
+                  handleCategorySelect("electronics");
+                } else if (item === "Screws & Fasteners") {
+                  handleCategorySelect("fasteners");
+                } else if (item === "Nuts") {
+                  handleCategorySelect("nuts");
+                } else if (item === "Offers") {
+                  setIsOffersOnly(true);
+                  const prodSection = document.getElementById("featured-products");
+                  if (prodSection && typeof prodSection.scrollIntoView === "function") {
+                    prodSection.scrollIntoView({ behavior: "smooth" });
+                  }
                 }
-              }
-            };
+              };
 
-            const isNavActive =
-              (item === "Home" && selectedCategory === "all" && !isOffersOnly && !activeSearch) ||
-              (item === "Electronics" && selectedCategory === "electronics" && !isOffersOnly) ||
-              (item === "Screws & Fasteners" && selectedCategory === "fasteners" && !isOffersOnly) ||
-              (item === "Nuts" && selectedCategory === "nuts" && !isOffersOnly) ||
-              (item === "Offers" && isOffersOnly);
+              const isNavActive =
+                (item === "Home" && selectedCategory === "all" && !isOffersOnly && !activeSearch) ||
+                (item === "Electronics" && selectedCategory === "electronics" && !isOffersOnly) ||
+                (item === "Screws & Fasteners" && selectedCategory === "fasteners" && !isOffersOnly) ||
+                (item === "Nuts" && selectedCategory === "nuts" && !isOffersOnly) ||
+                (item === "Offers" && isOffersOnly);
 
-            return (
-              <button
-                type="button"
-                key={item}
-                className={"nav-link" + (isNavActive ? " active" : "")}
-                onClick={handleNavClick}
-              >
-                {item}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  type="button"
+                  key={item}
+                  className={"nav-link" + (isNavActive ? " active" : "")}
+                  onClick={handleNavClick}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
         </nav>
       </header>
+
+      {/* Mobile Navigation Drawer & Backdrop */}
+      {mobileMenuOpen && (
+        <>
+          <div
+            className="vtx-mobile-nav-backdrop"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            id="mobile-nav-drawer"
+            className="vtx-mobile-nav-drawer is-open"
+            aria-label="Mobile Navigation"
+            role="region"
+          >
+            <div className="vtx-mobile-nav-header">
+              <div className="vtx-mobile-brand">
+                <span className="brand-name">VERTEX</span>
+                <span className="brand-tagline">ENGINEERING STORE</span>
+              </div>
+              <button
+                type="button"
+                className="vtx-mobile-nav-close"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="vtx-mobile-nav-content">
+              <div className="vtx-mobile-nav-section">
+                <span className="vtx-mobile-nav-title">Catalog Navigation</span>
+                <div className="vtx-mobile-nav-links">
+                  {navItems.map((item) => {
+                    const isNavActive =
+                      (item === "Home" && selectedCategory === "all" && !isOffersOnly && !activeSearch) ||
+                      (item === "Electronics" && selectedCategory === "electronics" && !isOffersOnly) ||
+                      (item === "Screws & Fasteners" && selectedCategory === "fasteners" && !isOffersOnly) ||
+                      (item === "Nuts" && selectedCategory === "nuts" && !isOffersOnly) ||
+                      (item === "Offers" && isOffersOnly);
+
+                    const handleMobileNavClick = (e) => {
+                      e.preventDefault();
+                      setMobileMenuOpen(false);
+                      if (item === "Home") {
+                        handleClearAllFilters();
+                      } else if (item === "Electronics") {
+                        handleCategorySelect("electronics");
+                      } else if (item === "Screws & Fasteners") {
+                        handleCategorySelect("fasteners");
+                      } else if (item === "Nuts") {
+                        handleCategorySelect("nuts");
+                      } else if (item === "Offers") {
+                        setIsOffersOnly(true);
+                        const prodSection = document.getElementById("featured-products");
+                        if (prodSection && typeof prodSection.scrollIntoView === "function") {
+                          prodSection.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }
+                    };
+
+                    return (
+                      <button
+                        type="button"
+                        key={`mobile-${item}`}
+                        className={`vtx-mobile-nav-link ${isNavActive ? "active" : ""}`}
+                        onClick={handleMobileNavClick}
+                      >
+                        <span>{item}</span>
+                        <span aria-hidden="true" style={{ opacity: 0.5, fontSize: "0.85rem" }}>→</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="vtx-mobile-nav-footer">
+                {currentUser ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-dark)" }}>
+                      👤 Signed in as {currentUser.fullName || currentUser.email}
+                    </div>
+                    {currentUser.role === "ADMIN" && (
+                      <button
+                        type="button"
+                        className="btn-admin-console"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate("admin");
+                        }}
+                        style={{ width: "100%", justifyContent: "center", padding: "8px" }}
+                      >
+                        ⚙️ Open Admin Console
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-logout"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      style={{ width: "100%", padding: "8px" }}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate("login");
+                    }}
+                    style={{ width: "100%" }}
+                  >
+                    👤 Sign In / Register
+                  </button>
+                )}
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", textAlign: "center", marginTop: "8px" }}>
+                  Pan-India Delivery • Verified Hardware Components
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Hero */}
       <section className="hero">
         <div className="hero-inner">
           <div className="hero-copy">
+            <div className="hero-badge">
+              <span>⚡ Industrial Components &amp; Precision Fasteners</span>
+            </div>
             <h1>
-              Small Components.
+              Precision Electronics &amp; Hardware Fasteners
               <br />
-              <span className="hero-accent">Big Possibilities.</span>
+              <span className="hero-accent">Built for Engineering &amp; B2B Supply</span>
             </h1>
             <p className="hero-sub">
-              Electronics &amp; Fasteners for a Smarter Tomorrow
+              Source factory-tested microcontrollers, industrial automation modules, SS304 metric fasteners, and lab components with transparent volume pricing and pan-India dispatch.
             </p>
-            <ul className="hero-features">
-              <li>⚙️ Wide Range of Products</li>
-              <li>💎 Assured Quality</li>
-              <li>🚚 Fast &amp; Reliable Delivery</li>
-              <li>🎧 Expert Support</li>
-            </ul>
             <div className="hero-ctas">
               <button
+                type="button"
                 className="btn btn-primary"
+                onClick={handleExploreProducts}
+              >
+                Explore Products ↓
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-light"
                 onClick={() => handleCategorySelect("electronics")}
               >
                 Shop Electronics →
               </button>
               <button
+                type="button"
                 className="btn btn-outline-light"
-                onClick={() => handleCategorySelect("fasteners")}
+                onClick={handleScrollToCategories}
               >
-                Shop Fasteners →
+                Browse Categories ↓
               </button>
+            </div>
+            <div className="hero-perks-row">
+              <span className="hero-perk-item">✓ Factory Verified Sourcing</span>
+              <span className="hero-perk-item">✓ SS304 Precision Tolerances</span>
+              <span className="hero-perk-item">✓ GST Tax Invoicing</span>
             </div>
           </div>
           <div className="hero-art" aria-hidden="true">
-            <div className="hero-art-glow" />
-            <span className="hero-art-emoji">🔧</span>
+            <div className="hero-card-preview">
+              <div className="hero-preview-header">
+                <span className="hero-pill-category">Hardware Showcase</span>
+                <span className="hero-pill-status">● Ready to Dispatch</span>
+              </div>
+              <div className="hero-preview-img-wrap">
+                <img src={arduinoImg} alt="Industrial Microcontroller" className="hero-preview-img" />
+              </div>
+              <div className="hero-preview-body">
+                <div className="hero-preview-title">Arduino Uno R3 &amp; SS304 Metric Hardware</div>
+                <div className="hero-preview-sku">SKU: ELEC-ARD-UNO-R3 • SS304 M3-M10</div>
+                <div className="hero-preview-footer">
+                  <span className="hero-preview-price">Verified B2B Direct Sourcing</span>
+                  <span className="hero-preview-tag">ISO 9001 Compliant</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust & Value Propositions */}
+      <section className="vtx-values-bar" aria-label="Why choose VERTEX">
+        <div className="vtx-values-inner">
+          <div className="vtx-value-card vtx-reveal vtx-stagger-1">
+            <div className="vtx-value-icon" aria-hidden="true">🔌</div>
+            <div className="vtx-value-content">
+              <h3 className="vtx-value-title">Industrial Component Selection</h3>
+              <p className="vtx-value-desc">
+                Factory-tested microcontrollers, motor drivers, PLCs, and development boards for production and lab prototypes.
+              </p>
+            </div>
+          </div>
+          <div className="vtx-value-card vtx-reveal vtx-stagger-2">
+            <div className="vtx-value-icon" aria-hidden="true">🔩</div>
+            <div className="vtx-value-content">
+              <h3 className="vtx-value-title">Technical Specifications</h3>
+              <p className="vtx-value-desc">
+                Standard metric pitches, SS304 tensile tolerance, and documented pack sizes for every fastener SKU.
+              </p>
+            </div>
+          </div>
+          <div className="vtx-value-card vtx-reveal vtx-stagger-3">
+            <div className="vtx-value-icon" aria-hidden="true">📦</div>
+            <div className="vtx-value-content">
+              <h3 className="vtx-value-title">Bulk Purchasing Options</h3>
+              <p className="vtx-value-desc">
+                Volume-tiered pricing and direct quote requests for workshops, educational institutions, and OEMs.
+              </p>
+            </div>
+          </div>
+          <div className="vtx-value-card vtx-reveal vtx-stagger-4">
+            <div className="vtx-value-icon" aria-hidden="true">🚚</div>
+            <div className="vtx-value-content">
+              <h3 className="vtx-value-title">Order Visibility &amp; Support</h3>
+              <p className="vtx-value-desc">
+                Transparent shipment dispatch, GST-compliant tax invoices, and dedicated technical inquiry assistance.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -903,7 +1389,7 @@ export default function App() {
                 : "Verified Catalog";
 
               return (
-                <div className={"category-card " + tint} key={cat.id || cat.slug}>
+                <div className={`category-card ${tint} vtx-reveal vtx-stagger-${(idx % 3) + 1}`} key={cat.id || cat.slug}>
                   <div className="category-icon">{icon}</div>
                   <h3>{cat.name}</h3>
                   <p>{cat.description || "High-precision components engineered for industrial & prototyping applications."}</p>
@@ -1039,6 +1525,7 @@ export default function App() {
                 product={p}
                 key={p.id || p.slug}
                 onAddToCart={handleAddToCart}
+                onViewDetails={setSelectedProduct}
                 isAdding={pendingCartAction?.id === p.variants?.[0]?.id}
               />
             ))}
@@ -1049,7 +1536,7 @@ export default function App() {
       {/* Reference lists: fastener & nut types, pulled from the product report */}
       <section className="section reference-section">
         <div className="reference-grid">
-          <div className="reference-card">
+          <div className="reference-card vtx-reveal vtx-stagger-1">
             <h3>Screws &amp; Fasteners — Types</h3>
             <ul>
               {fastenerTypes.map((t) => (
@@ -1057,7 +1544,7 @@ export default function App() {
               ))}
             </ul>
           </div>
-          <div className="reference-card">
+          <div className="reference-card vtx-reveal vtx-stagger-2">
             <h3>Nut Types</h3>
             <ul>
               {nutTypes.map((t) => (
@@ -1069,7 +1556,7 @@ export default function App() {
       </section>
 
       {/* Bulk orders banner */}
-      <section className="bulk-banner">
+      <section className="bulk-banner vtx-reveal">
         <div className="bulk-copy">
           <h3>
             Bulk Orders
@@ -1215,6 +1702,90 @@ export default function App() {
           <p>© {new Date().getFullYear()} VERTEX. All rights reserved.</p>
         </div>
       </footer>
+
+      {/* Product Technical Specifications Modal */}
+      {selectedProduct && (
+        <div
+          className="vtx-modal-backdrop"
+          onClick={() => setSelectedProduct(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="product-spec-title"
+        >
+          <div className="vtx-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="vtx-modal-header">
+              <div>
+                <span className="vtx-modal-badge">{selectedProduct.category?.name || "Hardware Component"}</span>
+                <h3 id="product-spec-title" className="vtx-modal-title">{selectedProduct.name}</h3>
+              </div>
+              <button
+                type="button"
+                className="vtx-modal-close"
+                onClick={() => setSelectedProduct(null)}
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="vtx-modal-body">
+              <div className="vtx-spec-grid">
+                <div className="vtx-spec-thumb">
+                  {selectedProduct.imageUrl ? (
+                    <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="vtx-spec-img" />
+                  ) : (
+                    <div className="vtx-spec-placeholder">
+                      {selectedProduct.name ? selectedProduct.name[0].toUpperCase() : "P"}
+                    </div>
+                  )}
+                </div>
+                <div className="vtx-spec-details">
+                  <div className="vtx-spec-line">
+                    <strong>SKU Code:</strong>{" "}
+                    <code>{selectedProduct.variants?.[0]?.sku || selectedProduct.sku || "VTX-GEN-SKU"}</code>
+                  </div>
+                  <div className="vtx-spec-line">
+                    <strong>Price:</strong>{" "}
+                    <span className="vtx-spec-price">₹{Number(selectedProduct.price || 0).toLocaleString("en-IN")}</span>
+                    {selectedProduct.variants?.[0]?.packSize && (
+                      <span className="vtx-spec-unit"> / {selectedProduct.variants[0].packSize}</span>
+                    )}
+                  </div>
+                  <div className="vtx-spec-line">
+                    <strong>Stock Status:</strong>{" "}
+                    <span className={selectedProduct.inStock !== false ? "vtx-stock-active" : "vtx-stock-out"}>
+                      {selectedProduct.inStock !== false ? "● In Stock (Warehouse Ready)" : "○ Backorder / Out of Stock"}
+                    </span>
+                  </div>
+                  <p className="vtx-spec-desc">
+                    {selectedProduct.description ||
+                      "Certified industrial engineering component designed for high-reliability circuit automation, robotics assemblies, and precision mechanical fixtures."}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="vtx-modal-footer">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setSelectedProduct(null)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  handleAddToCart(selectedProduct, selectedProduct.variants?.[0]);
+                  setSelectedProduct(null);
+                }}
+                disabled={selectedProduct.inStock === false}
+              >
+                🛒 Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Shopping Cart Drawer */}
       <CartDrawer

@@ -180,14 +180,29 @@ export async function createOrder(userId, {
         });
 
         // Decrement inventory stock safely in this transaction
-        await tx.productVariant.update({
-          where: { id: variant.id },
-          data: {
-            stockQuantity: {
-              decrement: item.quantity,
+        try {
+          await tx.productVariant.update({
+            where: { id: variant.id },
+            data: {
+              stockQuantity: {
+                decrement: item.quantity,
+              },
             },
-          },
-        });
+          });
+        } catch (updateErr) {
+          if (
+            updateErr.message?.includes("chk_variant_stock_non_negative") ||
+            updateErr.code === "23514"
+          ) {
+            const error = new Error(
+              `Insufficient stock for "${variant.product?.name || "Product"}" (${variant.sku}).`
+            );
+            error.code = "INSUFFICIENT_STOCK";
+            error.status = 400;
+            throw error;
+          }
+          throw updateErr;
+        }
       }
 
       subtotal = Number(subtotal.toFixed(2));

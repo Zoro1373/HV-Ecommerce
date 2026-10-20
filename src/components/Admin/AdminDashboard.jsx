@@ -60,11 +60,6 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
     }))
   );
 
-  const totalStockUnits = allVariants.reduce(
-    (sum, v) => sum + (v.stockQuantity || 0),
-    0
-  );
-
   const lowStockItems = allVariants.filter(
     (v) => (v.stockQuantity || 0) <= 50
   );
@@ -157,38 +152,6 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
           </div>
           <div className="adm-metric-icon" aria-hidden="true">
             📦
-          </div>
-        </div>
-
-        <div
-          className="adm-metric-card"
-          onClick={() => onNavigateSection("inventory")}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="adm-metric-info">
-            <span className="adm-metric-label">Total SKUs in Stock</span>
-            <span className="adm-metric-value">{allVariants.length}</span>
-            <span className="adm-metric-sub">
-              {totalStockUnits.toLocaleString()} Total Units
-            </span>
-          </div>
-          <div className="adm-metric-icon icon-green" aria-hidden="true">
-            📊
-          </div>
-        </div>
-
-        <div
-          className="adm-metric-card"
-          onClick={() => onNavigateSection("inventory")}
-          style={{ cursor: "pointer" }}
-        >
-          <div className="adm-metric-info">
-            <span className="adm-metric-label">Low Stock Alerts</span>
-            <span className="adm-metric-value">{lowStockItems.length}</span>
-            <span className="adm-metric-sub">Variants with &le; 50 units</span>
-          </div>
-          <div className="adm-metric-icon icon-warning" aria-hidden="true">
-            ⚠️
           </div>
         </div>
 

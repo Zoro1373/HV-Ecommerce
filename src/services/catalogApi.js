@@ -8,6 +8,9 @@
  * - Standardized error handling and parameter formatting.
  */
 
+import { isMockApiEnabled } from "../mock/mockConfig";
+import * as mockCatalogApi from "../mock/mockCatalogApi";
+
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const defaultHeaders = {
@@ -47,6 +50,10 @@ async function handleResponse(response) {
  * Fetches all active top-level categories and subcategories from GET /api/categories.
  */
 export async function getCategories() {
+  if (isMockApiEnabled()) {
+    return mockCatalogApi.getCategories();
+  }
+
   const response = await fetch(`${API_BASE}/api/categories`, {
     method: "GET",
     headers: defaultHeaders,
@@ -60,6 +67,10 @@ export async function getCategories() {
  * Fetches a single category and its products by slug from GET /api/categories/:slug.
  */
 export async function getCategoryBySlug(slug) {
+  if (isMockApiEnabled()) {
+    return mockCatalogApi.getCategoryBySlug(slug);
+  }
+
   const response = await fetch(`${API_BASE}/api/categories/${encodeURIComponent(slug)}`, {
     method: "GET",
     headers: defaultHeaders,
@@ -91,6 +102,19 @@ export async function getProducts({
   page = 1,
   limit = 12,
 } = {}) {
+  if (isMockApiEnabled()) {
+    return mockCatalogApi.getProducts({
+      q,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      sort,
+      page,
+      limit,
+    });
+  }
+
   const query = new URLSearchParams();
   if (q && q.trim()) query.set("q", q.trim());
   if (category && category.trim() && category !== "all") query.set("category", category.trim());
@@ -114,6 +138,10 @@ export async function getProducts({
  * Fetches a single product and its active variants by slug from GET /api/products/:slug.
  */
 export async function getProductBySlug(slug) {
+  if (isMockApiEnabled()) {
+    return mockCatalogApi.getProductBySlug(slug);
+  }
+
   const response = await fetch(`${API_BASE}/api/products/${encodeURIComponent(slug)}`, {
     method: "GET",
     headers: defaultHeaders,

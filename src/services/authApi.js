@@ -8,6 +8,9 @@
  * - Never stores passwords, tokens, or auth secrets in localStorage or sessionStorage.
  */
 
+import { isMockApiEnabled } from "../mock/mockConfig";
+import * as mockAuthApi from "../mock/mockAuthApi";
+
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const defaultHeaders = {
@@ -48,6 +51,10 @@ async function handleResponse(response) {
  * If normal login succeeds, returns { success: true, user: { ... } } and sets the vertex_session cookie.
  */
 export async function loginUser({ email, password }) {
+  if (isMockApiEnabled()) {
+    return mockAuthApi.loginUser({ email, password });
+  }
+
   const response = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: defaultHeaders,
@@ -65,6 +72,10 @@ export async function loginUser({ email, password }) {
  * Verifies a second-factor challenge during login using a 6-digit TOTP code or recovery code.
  */
 export async function verifyMfaLogin({ mfaChallengeToken, code, recoveryCode }) {
+  if (isMockApiEnabled()) {
+    return mockAuthApi.verifyMfaLogin({ mfaChallengeToken, code, recoveryCode });
+  }
+
   const payload = { mfaChallengeToken };
   if (code) {
     payload.code = code.trim();
@@ -95,6 +106,18 @@ export async function registerUser({
   companyName = null,
   gstin = null,
 }) {
+  if (isMockApiEnabled()) {
+    return mockAuthApi.registerUser({
+      fullName,
+      email,
+      password,
+      phone,
+      accountType,
+      companyName,
+      gstin,
+    });
+  }
+
   const payload = {
     fullName: fullName.trim(),
     email: email.trim().toLowerCase(),
@@ -122,6 +145,10 @@ export async function registerUser({
  * Initiates a password reset request.
  */
 export async function requestPasswordReset({ email }) {
+  if (isMockApiEnabled()) {
+    return mockAuthApi.requestPasswordReset({ email });
+  }
+
   const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
     method: "POST",
     headers: defaultHeaders,
@@ -138,6 +165,10 @@ export async function requestPasswordReset({ email }) {
  * Fetches the currently authenticated user profile from the server using the HttpOnly session cookie.
  */
 export async function getCurrentUser() {
+  if (isMockApiEnabled()) {
+    return mockAuthApi.getCurrentUser();
+  }
+
   const response = await fetch(`${API_BASE}/api/auth/me`, {
     method: "GET",
     headers: {
@@ -153,6 +184,10 @@ export async function getCurrentUser() {
  * Logs out the user and invalidates the session in PostgreSQL.
  */
 export async function logoutUser() {
+  if (isMockApiEnabled()) {
+    return mockAuthApi.logoutUser();
+  }
+
   const response = await fetch(`${API_BASE}/api/auth/logout`, {
     method: "POST",
     headers: defaultHeaders,
@@ -166,6 +201,10 @@ export async function logoutUser() {
  * Checks if the current session has verified ADMIN permissions.
  */
 export async function verifyAdminAccess() {
+  if (isMockApiEnabled()) {
+    return mockAuthApi.verifyAdminAccess();
+  }
+
   const response = await fetch(`${API_BASE}/api/auth/admin-check`, {
     method: "GET",
     headers: {

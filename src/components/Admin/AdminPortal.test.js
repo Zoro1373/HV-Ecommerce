@@ -162,7 +162,8 @@ describe("VERTEX Admin Portal Suite", () => {
 
     // Check KPI cards
     expect(screen.getByText(/Active Products/i)).toBeInTheDocument();
-    expect(screen.getByText(/Total SKUs in Stock/i)).toBeInTheDocument();
+    expect(screen.getByText(/Orders & Revenue/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Total SKUs in Stock/i)).not.toBeInTheDocument();
     expect(screen.getByText(/PostgreSQL 18.6 Live/i)).toBeInTheDocument();
 
     // Check Low Stock telemetry item (Arduino Uno R3 has stock 50 <= 50)

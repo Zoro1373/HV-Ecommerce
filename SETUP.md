@@ -25,6 +25,35 @@ npm install
 
 Keep the current frontend package configuration and build tool.
 
+## 1a. Frontend-Only Development Mode (No Backend or Database Required)
+For frontend UI/UX engineers or when network/database connectivity is unavailable, VERTEX provides a **Frontend-Only Development Mode**:
+
+1. **Option A: Persistent flag in `.env.local`**:
+   Create `.env.local` in the project root:
+   ```ini
+   REACT_APP_USE_MOCK_API=true
+   ```
+   Start the frontend dev server:
+   ```powershell
+   npm start
+   ```
+
+2. **Option B: Quick URL parameter**:
+   Launch `npm start`, then open your browser at:
+   ```text
+   http://localhost:3000/?mock=true
+   ```
+
+3. **Option C: UI Dev Banner Toggle**:
+   When mock mode is active, an orange `⚡ Mock Dev Mode` banner displays across the top of the viewport. Use the interactive controls to toggle between simulated `Guest`, `Customer`, and `Admin` sessions with one click, or click `Disable Mock` to return to live backend connectivity.
+
+4. **Accessing the Admin Portal in Mock Mode**:
+   - **Method 1 (1-Click Banner)**: In Mock Dev Mode, click the **`Admin`** button in the top banner. This automatically sets the simulated Chief Engineer admin session and immediately transitions to `/admin#dashboard`.
+   - **Method 2 (Direct URL)**: Navigate directly to `http://localhost:3000/admin?mock=true`.
+   - **Return to Storefront**: While inside the Admin Portal, click the **`← Storefront`** button in the mock banner to switch back to the customer homepage.
+
+> **Security Guard**: Mock mode is strictly guarded in `src/mock/mockConfig.js` and automatically disabled in production builds (`npm run build`). Mock authentication and mock checkout will never run or be accessible in production.
+
 ## 2. Configure PostgreSQL & Least-Privilege Role Separation
 VERTEX utilizes a least-privilege database security model separating normal application runtime access from migration/administrative access:
 1. **Application Runtime Role (`vertex_app`)**: Restricted to DML operations (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) on domain tables. Strictly blocked from DDL, TRUNCATE, and `_prisma_migrations`. Connects via `DATABASE_URL` using the connection pooler.

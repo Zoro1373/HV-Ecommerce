@@ -11,6 +11,9 @@
  * - Graceful handling and transparent reporting of endpoints scheduled for future phases.
  */
 
+import { isMockApiEnabled } from "../mock/mockConfig";
+import * as mockAdminApi from "../mock/mockAdminApi";
+
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const defaultHeaders = {
@@ -52,6 +55,10 @@ async function handleResponse(response) {
  * Throws with status 401 (unauthenticated) or 403 (unauthorized customer/b2b).
  */
 export async function verifyAdminAuthorization() {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.verifyAdminAuthorization();
+  }
+
   const response = await fetch(`${API_BASE}/api/auth/admin-check`, {
     method: "GET",
     headers: {
@@ -67,6 +74,10 @@ export async function verifyAdminAuthorization() {
  * Checks server health and database connectivity.
  */
 export async function getSystemHealth() {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getSystemHealth();
+  }
+
   const response = await fetch(`${API_BASE}/api/health`, {
     method: "GET",
     headers: {
@@ -91,6 +102,19 @@ export async function getAdminProducts({
   page = 1,
   limit = 12,
 } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminProducts({
+      q,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      sort,
+      page,
+      limit,
+    });
+  }
+
   const query = new URLSearchParams();
   if (q && q.trim()) query.set("q", q.trim());
   if (category && category.trim()) query.set("category", category.trim());
@@ -116,6 +140,10 @@ export async function getAdminProducts({
  * Fetches product details and all variants by slug or UUID.
  */
 export async function getAdminProductDetails(slugOrId) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminProductDetails(slugOrId);
+  }
+
   const response = await fetch(`${API_BASE}/api/products/${encodeURIComponent(slugOrId)}`, {
     method: "GET",
     headers: {
@@ -131,6 +159,10 @@ export async function getAdminProductDetails(slugOrId) {
  * Fetches all active categories with product counts.
  */
 export async function getAdminCategories() {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminCategories();
+  }
+
   const response = await fetch(`${API_BASE}/api/categories`, {
     method: "GET",
     headers: {
@@ -146,6 +178,10 @@ export async function getAdminCategories() {
  * Fetches a single category with its products by slug.
  */
 export async function getAdminCategoryDetails(slug) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminCategoryDetails(slug);
+  }
+
   const response = await fetch(`${API_BASE}/api/categories/${encodeURIComponent(slug)}`, {
     method: "GET",
     headers: {
@@ -162,6 +198,10 @@ export async function getAdminCategoryDetails(slug) {
  * Returns the created product or clear message if endpoint is pending.
  */
 export async function createAdminProduct(productData) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.createAdminProduct(productData);
+  }
+
   const response = await fetch(`${API_BASE}/api/admin/products`, {
     method: "POST",
     headers: defaultHeaders,
@@ -176,6 +216,10 @@ export async function createAdminProduct(productData) {
  * Attempts to create a new category.
  */
 export async function createAdminCategory(categoryData) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.createAdminCategory(categoryData);
+  }
+
   const response = await fetch(`${API_BASE}/api/admin/categories`, {
     method: "POST",
     headers: defaultHeaders,
@@ -190,6 +234,10 @@ export async function createAdminCategory(categoryData) {
  * Attempts to update inventory stock for a variant.
  */
 export async function updateVariantStock(variantId, { stockQuantity, reason }) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.updateVariantStock(variantId, { stockQuantity, reason });
+  }
+
   const response = await fetch(`${API_BASE}/api/admin/inventory/variants/${variantId}`, {
     method: "PATCH",
     headers: defaultHeaders,
@@ -204,6 +252,10 @@ export async function updateVariantStock(variantId, { stockQuantity, reason }) {
  * Fetches orders list. If endpoint is not yet mounted, returns pending integration status.
  */
 export async function getAdminOrders({ page = 1, limit = 10, status = "" } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminOrders({ page, limit, status });
+  }
+
   try {
     const query = new URLSearchParams({ page, limit });
     if (status) query.set("status", status);
@@ -241,6 +293,10 @@ export async function getAdminOrders({ page = 1, limit = 10, status = "" } = {})
  * Fetches customers list. If endpoint is not yet mounted, returns pending integration status.
  */
 export async function getAdminCustomers({ page = 1, limit = 10, role = "" } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminCustomers({ page, limit, role });
+  }
+
   try {
     const query = new URLSearchParams({ page, limit });
     if (role) query.set("role", role);
@@ -278,6 +334,10 @@ export async function getAdminCustomers({ page = 1, limit = 10, role = "" } = {}
  * Fetches audit log events.
  */
 export async function getAdminAuditLogs({ page = 1, limit = 20 } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminAuditLogs({ page, limit });
+  }
+
   try {
     const query = new URLSearchParams({ page, limit });
     const response = await fetch(`${API_BASE}/api/admin/audit-logs?${query.toString()}`, {

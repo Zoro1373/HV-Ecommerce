@@ -8,6 +8,9 @@
  * - Server-authoritative price derivation and validation.
  */
 
+import { isMockApiEnabled } from "../mock/mockConfig";
+import * as mockCartApi from "../mock/mockCartApi";
+
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const defaultHeaders = {
@@ -47,6 +50,10 @@ async function handleResponse(response) {
  * Retrieves the current authenticated user's cart and calculated subtotal.
  */
 export async function getCart() {
+  if (isMockApiEnabled()) {
+    return mockCartApi.getCart();
+  }
+
   const response = await fetch(`${API_BASE}/api/cart`, {
     method: "GET",
     headers: defaultHeaders,
@@ -60,6 +67,10 @@ export async function getCart() {
  * Adds a product variant with positive quantity to the current user's cart.
  */
 export async function addItemToCart({ variantId, quantity = 1 }) {
+  if (isMockApiEnabled()) {
+    return mockCartApi.addItemToCart({ variantId, quantity });
+  }
+
   const response = await fetch(`${API_BASE}/api/cart/items`, {
     method: "POST",
     headers: defaultHeaders,
@@ -74,6 +85,10 @@ export async function addItemToCart({ variantId, quantity = 1 }) {
  * Updates the quantity of an existing cart item.
  */
 export async function updateCartItemQuantity(itemId, quantity) {
+  if (isMockApiEnabled()) {
+    return mockCartApi.updateCartItemQuantity(itemId, quantity);
+  }
+
   const response = await fetch(`${API_BASE}/api/cart/items/${encodeURIComponent(itemId)}`, {
     method: "PATCH",
     headers: defaultHeaders,
@@ -88,6 +103,10 @@ export async function updateCartItemQuantity(itemId, quantity) {
  * Removes an item from the current user's cart.
  */
 export async function removeCartItem(itemId) {
+  if (isMockApiEnabled()) {
+    return mockCartApi.removeCartItem(itemId);
+  }
+
   const response = await fetch(`${API_BASE}/api/cart/items/${encodeURIComponent(itemId)}`, {
     method: "DELETE",
     headers: defaultHeaders,
@@ -101,6 +120,10 @@ export async function removeCartItem(itemId) {
  * Clears all items from the current user's cart.
  */
 export async function clearCart() {
+  if (isMockApiEnabled()) {
+    return mockCartApi.clearCart();
+  }
+
   const response = await fetch(`${API_BASE}/api/cart`, {
     method: "DELETE",
     headers: defaultHeaders,
@@ -114,6 +137,10 @@ export async function clearCart() {
  * Merges validated guest cart items into the authenticated user's cart upon login.
  */
 export async function mergeGuestCart(items = []) {
+  if (isMockApiEnabled()) {
+    return mockCartApi.mergeGuestCart(items);
+  }
+
   const response = await fetch(`${API_BASE}/api/cart/merge`, {
     method: "POST",
     headers: defaultHeaders,

@@ -87,7 +87,7 @@ export default function AdminLayout({
 
   useEffect(() => {
     checkAuthorization();
-  }, [checkAuthorization]);
+  }, [checkAuthorization, currentUser]);
 
   // Handle URL sync
   const handleSelectSection = (sectionId) => {

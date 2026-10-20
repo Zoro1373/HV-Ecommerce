@@ -921,4 +921,47 @@ describe('VERTEX Unified Login & Role-Based Routing Suite', () => {
       expect(screen.getByTestId('checkout-auth-required')).toBeInTheDocument();
     });
   });
+
+  test('30. Mock Dev Mode: clicking Admin button in banner opens Admin Portal directly and updates session state', async () => {
+    window.sessionStorage.setItem('vertex_mock_mode', 'true');
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-dev-banner')).toBeInTheDocument();
+      expect(screen.getByTestId('mock-admin-btn')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('mock-admin-btn'));
+
+    await waitFor(() => {
+      // Confirms navigation to Admin view
+      expect(window.location.pathname).toBe('/admin');
+      // Confirms Chief Engineer mock admin session persisted to localStorage
+      const stored = JSON.parse(window.localStorage.getItem('vertex_mock_user') || '{}');
+      expect(stored.role).toBe('ADMIN');
+      expect(stored.email).toBe('admin@vertex.local');
+      // Confirms Storefront return button is now visible in the banner
+      expect(screen.getByText('← Storefront')).toBeInTheDocument();
+    });
+  });
+
+  test('31. Mock Dev Mode: clicking ← Storefront from Admin Portal returns to storefront', async () => {
+    window.sessionStorage.setItem('vertex_mock_mode', 'true');
+    window.localStorage.setItem('vertex_mock_user', JSON.stringify(mockAdminUser));
+    window.history.pushState({}, '', '/admin');
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('← Storefront')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('← Storefront'));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+      expect(screen.getByText('Arduino Uno R3 Microcontroller Board')).toBeInTheDocument();
+    });
+  });
 });
