@@ -5,8 +5,13 @@ import LoginPage from "./components/Login/LoginPage";
 import AdminLayout from "./components/Admin/AdminLayout";
 import CartDrawer from "./components/Cart/CartDrawer";
 import CheckoutPage from "./components/Checkout/CheckoutPage";
+import ProductListPage from "./components/Products/ProductListPage";
+import ProductDetailPage from "./components/Products/ProductDetailPage";
+import ProductCard from "./components/Products/ProductCard";
+import WishlistDrawer from "./components/Products/WishlistDrawer";
+import QuoteModal from "./components/Products/QuoteModal";
 import { getCurrentUser, logoutUser } from "./services/authApi";
-import { getCategories, getProducts } from "./services/catalogApi";
+import { getCategories, getProducts, getProductBySlug } from "./services/catalogApi";
 import {
   getCart,
   addItemToCart,
@@ -24,9 +29,11 @@ import {
   removeGuestItem,
   clearGuestCart,
 } from "./utils/guestCart";
+import { getWishlistCount } from "./utils/wishlist";
 import { isMockApiEnabled, setMockMode } from "./mock/mockConfig";
 import { MOCK_USERS } from "./mock/mockData";
 import "./App.css";
+import "./components/Products/Products.css";
 
 const topBarItems = [
   { icon: "✔", label: "Quality Products" },
@@ -39,6 +46,7 @@ const topBarItems = [
 
 const navItems = [
   "Home",
+  "Products",
   "Electronics",
   "Screws & Fasteners",
   "Nuts",
@@ -69,106 +77,7 @@ const nutTypes = [
   "Flange Nuts",
 ];
 
-const brands = ["Arduino", "Raspberry Pi", "Delta", "STM", "Bosch"];
-
-function Stars({ rating }) {
-  const full = Math.floor(rating);
-  const half = rating - full >= 0.5;
-  return (
-    <span className="stars" aria-label={`${rating} out of 5 stars`}>
-      {Array.from({ length: 5 }).map((_, i) => {
-        if (i < full) return <span key={i}>★</span>;
-        if (i === full && half) return <span key={i}>⯨</span>;
-        return (
-          <span key={i} className="star-empty">
-            ★
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
-function ProductCard({ product, onAddToCart, onViewDetails, isAdding = false }) {
-  const [imgError, setImgError] = useState(false);
-  const primaryVariant = product.variants?.[0];
-  const unitLabel = primaryVariant?.packSize || product.unit || null;
-  const ratingValue = product.rating || 5;
-  const reviewCount = product.reviews || (product.variants?.length ? 24 : 12);
-  const inStock = product.inStock !== false && primaryVariant?.stockQuantity !== 0;
-  const skuCode = primaryVariant?.sku || product.sku || (product.slug ? `VTX-${product.slug.toUpperCase()}` : "VTX-GEN-SKU");
-
-  return (
-    <div className="product-card vtx-reveal" data-testid={`product-card-${product.id || product.slug}`}>
-      {product.tag && (
-        <span
-          className={
-            "product-tag " +
-            (product.tag.toLowerCase().includes("off") ? "tag-discount" : "tag-best")
-          }
-        >
-          {product.tag}
-        </span>
-      )}
-      <div className="product-thumb">
-        {product.imageUrl && !imgError ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="product-image"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <span className="thumb-placeholder">
-            {product.name ? product.name[0].toUpperCase() : "P"}
-          </span>
-        )}
-      </div>
-      <div className="product-body">
-        <div className="product-sku" title={`SKU: ${skuCode}`}>
-          <span className="sku-label">SKU:</span> <code className="sku-code">{skuCode}</code>
-        </div>
-        <p className="product-name" title={product.name}>{product.name}</p>
-        <div className="product-price-row">
-          <span className="price">₹{Number(product.price || 0).toLocaleString("en-IN")}</span>
-          {product.mrp && Number(product.mrp) > Number(product.price) && (
-            <span className="mrp">₹{Number(product.mrp).toLocaleString("en-IN")}</span>
-          )}
-          {unitLabel && <span className="unit">({unitLabel})</span>}
-        </div>
-        <div className="product-rating-row">
-          <Stars rating={ratingValue} />
-          <span className="review-count">({reviewCount})</span>
-        </div>
-        <p className={"stock-line" + (!inStock ? " stock-out" : "")}>
-          <span className={"stock-dot" + (!inStock ? " stock-out" : "")} />{" "}
-          {inStock ? "In Stock" : "Out of Stock"}
-        </p>
-        <div className="product-actions-row">
-          {onViewDetails && (
-            <button
-              type="button"
-              className="btn btn-outline btn-specs"
-              onClick={() => onViewDetails(product)}
-              title="View Technical Specs"
-            >
-              Specs
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-outline btn-cart"
-            onClick={() => onAddToCart && onAddToCart(product, primaryVariant)}
-            disabled={!inStock || isAdding}
-            data-testid={`add-to-cart-${product.id || product.slug}`}
-          >
-            {isAdding ? "Adding..." : "🛒 Add to Cart"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const brands = ["DMEGC", "NORDA", "Panasonic", "HVNEX", "Arduino", "Raspberry Pi", "Delta", "Bosch"];
 
 function MockDevBanner({ currentUser, currentView, onSimulateUser, onToggleMock, onNavigate }) {
   if (!isMockApiEnabled()) return null;
@@ -234,18 +143,46 @@ function MockDevBanner({ currentUser, currentView, onSimulateUser, onToggleMock,
 export default function App() {
   const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== "undefined") {
-      if (window.location.pathname.startsWith("/admin")) return "admin";
-      if (window.location.pathname === "/login") return "login";
-      if (window.location.pathname === "/checkout") return "checkout";
+      const path = window.location.pathname;
+      if (path.startsWith("/admin")) return "admin";
+      if (path === "/login") return "login";
+      if (path === "/checkout") return "checkout";
+      if (path.startsWith("/product/")) return "product-detail";
+      if (path === "/products" || path === "/catalog") return "products";
     }
     return "home";
   });
+
+  const [selectedProductSlug, setSelectedProductSlug] = useState(() => {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/product/")) {
+      return decodeURIComponent(window.location.pathname.replace("/product/", "").split("/")[0] || "");
+    }
+    return null;
+  });
+
+  const [selectedCatalogCategory, setSelectedCatalogCategory] = useState(() => {
+    if (typeof window !== "undefined" && window.location.search) {
+      const p = new URLSearchParams(window.location.search);
+      return p.get("category") || "all";
+    }
+    return "all";
+  });
+
+  const [selectedCatalogSubcat, setSelectedCatalogSubcat] = useState(() => {
+    if (typeof window !== "undefined" && window.location.search) {
+      const p = new URLSearchParams(window.location.search);
+      return p.get("subcat") || "all";
+    }
+    return "all";
+  });
+
   const [adminSection, setAdminSection] = useState(() => {
     if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin/")) {
       return window.location.pathname.replace("/admin/", "").split("/")[0] || "dashboard";
     }
     return "dashboard";
   });
+
   const [currentUser, setCurrentUser] = useState(null);
   const [flashMessage, setFlashMessage] = useState(null);
 
@@ -255,6 +192,10 @@ export default function App() {
   const [cartLoading, setCartLoading] = useState(false);
   const [cartError, setCartError] = useState(null);
   const [pendingCartAction, setPendingCartAction] = useState(null);
+
+  // Wishlist state
+  const [wishlistOpen, setWishlistOpen] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(() => getWishlistCount());
 
   // Storefront Catalog state
   const [categories, setCategories] = useState([]);
@@ -266,22 +207,39 @@ export default function App() {
   const [productsError, setProductsError] = useState(null);
   const [pagination, setPagination] = useState({ totalItems: 0, page: 1, limit: 12, totalPages: 1 });
 
-  // Search & Filtering state
+  // Search & Filtering state for Home view
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isOffersOnly, setIsOffersOnly] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Dedicated Product Detail state
+  const [detailProduct, setDetailProduct] = useState(null);
+  const [detailRelated, setDetailRelated] = useState([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // RFQ Modal State
+  const [quoteProduct, setQuoteProduct] = useState(null);
+
   // Newsletter state
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
-  // Technical Product Specification Modal state
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  // Quick Technical Specs Modal state (home specs button fallback)
+  const [selectedQuickProduct, setSelectedQuickProduct] = useState(null);
 
   // Micro-interaction: Animated cart badge on item addition
   const [cartBadgeBumped, setCartBadgeBumped] = useState(false);
+
+  // Listen for Wishlist updates across components
+  useEffect(() => {
+    const handleWishlistChange = (e) => {
+      setWishlistCount(e.detail?.count ?? getWishlistCount());
+    };
+    window.addEventListener("vertex_wishlist_updated", handleWishlistChange);
+    return () => window.removeEventListener("vertex_wishlist_updated", handleWishlistChange);
+  }, []);
 
   // Close mobile drawer on Escape key and lock body scroll
   useEffect(() => {
@@ -321,14 +279,24 @@ export default function App() {
     // Handle browser back/forward buttons
     const handlePopState = () => {
       setMobileMenuOpen(false);
-      if (window.location.pathname.startsWith("/admin")) {
-        const sec = window.location.pathname.replace("/admin/", "").split("/")[0] || "dashboard";
+      const path = window.location.pathname;
+      if (path.startsWith("/admin")) {
+        const sec = path.replace("/admin/", "").split("/")[0] || "dashboard";
         setAdminSection(sec);
         setCurrentView("admin");
-      } else if (window.location.pathname === "/login") {
+      } else if (path === "/login") {
         setCurrentView("login");
-      } else if (window.location.pathname === "/checkout") {
+      } else if (path === "/checkout") {
         setCurrentView("checkout");
+      } else if (path.startsWith("/product/")) {
+        const slug = decodeURIComponent(path.replace("/product/", "").split("/")[0] || "");
+        setSelectedProductSlug(slug);
+        setCurrentView("product-detail");
+      } else if (path === "/products" || path === "/catalog") {
+        const p = new URLSearchParams(window.location.search);
+        setSelectedCatalogCategory(p.get("category") || "all");
+        setSelectedCatalogSubcat(p.get("subcat") || "all");
+        setCurrentView("products");
       } else {
         setCurrentView("home");
       }
@@ -381,7 +349,47 @@ export default function App() {
     loadProducts();
   }, [loadProducts]);
 
-  // Scroll-triggered reveals with fail-safe visibility and prefers-reduced-motion check
+  // Load Product Detail when in product-detail view
+  useEffect(() => {
+    if (currentView !== "product-detail" || !selectedProductSlug) return;
+
+    let isMounted = true;
+    setDetailLoading(true);
+
+    getProductBySlug(selectedProductSlug)
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.product) {
+          setDetailProduct(res.product);
+          setDetailRelated(res.relatedProducts || []);
+        } else {
+          // Fallback search in already loaded products
+          const found = products.find((p) => p.slug === selectedProductSlug || p.id === selectedProductSlug);
+          if (found) {
+            setDetailProduct(found);
+            setDetailRelated(products.filter((p) => p.id !== found.id && p.categoryId === found.categoryId).slice(0, 4));
+          }
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn("Product slug fetch fallback:", err.message);
+        const found = products.find((p) => p.slug === selectedProductSlug || p.id === selectedProductSlug);
+        if (found) {
+          setDetailProduct(found);
+          setDetailRelated(products.filter((p) => p.id !== found.id && p.categoryId === found.categoryId).slice(0, 4));
+        }
+      })
+      .finally(() => {
+        if (isMounted) setDetailLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentView, selectedProductSlug, products]);
+
+  // Scroll-triggered reveals with fail-safe visibility
   useEffect(() => {
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
       return;
@@ -389,11 +397,9 @@ export default function App() {
 
     try {
       const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-      if (mediaQuery.matches) {
-        return;
-      }
+      if (mediaQuery.matches) return;
     } catch (e) {
-      // Ignore if matchMedia is unsupported
+      // Ignore
     }
 
     const observerCallback = (entries, observer) => {
@@ -411,17 +417,14 @@ export default function App() {
       threshold: 0.1,
     });
 
-    // Mark document container so CSS reveal rules engage
     const pageEl = document.querySelector(".page");
     if (pageEl) {
       pageEl.classList.add("vtx-observer-ready");
     }
 
-    // Observe reveal targets
     const elements = document.querySelectorAll(".vtx-reveal:not(.is-revealed)");
     elements.forEach((el) => observer.observe(el));
 
-    // Fail-safe timeout: ensure all content becomes visible even if observer fails or stalls
     const safetyTimer = setTimeout(() => {
       document.querySelectorAll(".vtx-reveal:not(.is-revealed)").forEach((el) => {
         el.classList.add("is-revealed");
@@ -434,20 +437,26 @@ export default function App() {
     };
   }, [products, categories, currentView]);
 
-  const navigate = (view, section = "dashboard", redirectParam = null) => {
+  const navigate = (view, section = "dashboard", redirectParam = null, slug = null, searchParams = "") => {
     setMobileMenuOpen(false);
     setCurrentView(view);
     let targetPath = "/";
+
     if (view === "login") {
       targetPath = redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : "/login";
-    }
-    if (view === "checkout") {
+    } else if (view === "checkout") {
       targetPath = "/checkout";
-    }
-    if (view === "admin") {
+    } else if (view === "admin") {
       setAdminSection(section);
       targetPath = section === "dashboard" ? "/admin" : `/admin/${section}`;
+    } else if (view === "product-detail") {
+      const targetSlug = slug || selectedProductSlug;
+      setSelectedProductSlug(targetSlug);
+      targetPath = `/product/${encodeURIComponent(targetSlug)}`;
+    } else if (view === "products") {
+      targetPath = searchParams ? `/products?${searchParams}` : "/products";
     }
+
     if (typeof window !== "undefined" && window.location.pathname + window.location.search !== targetPath) {
       window.history.pushState(null, "", targetPath);
     }
@@ -456,10 +465,23 @@ export default function App() {
     }
   };
 
+  const handleOpenProductDetail = (productOrSlug) => {
+    const slug = typeof productOrSlug === "string" ? productOrSlug : productOrSlug.slug || productOrSlug.id;
+    setSelectedProductSlug(slug);
+    navigate("product-detail", "dashboard", null, slug);
+  };
+
+  const handleNavigateCatalogWithCategory = (catSlug = "all", subcatSlug = "all") => {
+    setSelectedCatalogCategory(catSlug);
+    setSelectedCatalogSubcat(subcatSlug);
+    const params = new URLSearchParams();
+    if (catSlug && catSlug !== "all") params.set("category", catSlug);
+    if (subcatSlug && subcatSlug !== "all") params.set("subcat", subcatSlug);
+    navigate("products", "dashboard", null, null, params.toString());
+  };
+
   const handleLoginSuccess = async (user) => {
     setCurrentUser(user);
-
-    // Merge guest cart items into authenticated user cart upon login
     const guestItems = getStoredGuestItems();
     if (guestItems.length > 0) {
       try {
@@ -499,7 +521,6 @@ export default function App() {
       setFlashMessage(`Welcome back, ${user.fullName || user.email}!`);
     }
 
-    // Check if there was an intended redirect destination before login
     let redirectDestination = null;
     if (typeof window !== "undefined" && window.location.search) {
       const searchParams = new URLSearchParams(window.location.search);
@@ -533,27 +554,38 @@ export default function App() {
   };
 
   // Cart operations
-  const handleAddToCart = async (product, variant) => {
+  const handleAddToCart = async (product, variant, quantity = 1) => {
     const targetVariant = variant || product?.variants?.[0];
     if (!targetVariant) {
       setCartError("Unable to add product: no purchasable variant found.");
       return;
     }
 
+    // If product has no price or is quote-only, open quote modal
+    if (product.price === null || product.price === undefined) {
+      setQuoteProduct(product);
+      return;
+    }
+
+    const qty = Math.max(1, parseInt(quantity, 10) || 1);
     setPendingCartAction({ type: "add", id: targetVariant.id });
     setCartError(null);
 
     try {
       if (currentUser) {
-        const res = await addItemToCart({ variantId: targetVariant.id, quantity: 1 });
+        const res = await addItemToCart({ variantId: targetVariant.id, quantity: qty });
         if (res?.cart) {
           setCart(res.cart);
         }
       } else {
-        const updatedCart = addGuestItem(product, targetVariant, 1);
+        const updatedCart = addGuestItem(product, targetVariant, qty);
         setCart(updatedCart);
       }
-      setFlashMessage(`Added "${product.name}" to your cart.`);
+      setFlashMessage(
+        qty > 1
+          ? `Added ${qty} × "${product.name}" to your cart.`
+          : `Added "${product.name}" to your cart.`
+      );
       setCartBadgeBumped(true);
       setTimeout(() => setCartBadgeBumped(false), 550);
     } catch (err) {
@@ -640,7 +672,6 @@ export default function App() {
   };
 
   const handleOrderSuccess = (order) => {
-    // Re-fetch cart from API to ensure it reflects the cleared cart state in UI
     getCart()
       .then((res) => {
         if (res?.cart) setCart(res.cart);
@@ -656,6 +687,9 @@ export default function App() {
     const query = searchInput.trim();
     setActiveSearch(query);
     setIsOffersOnly(false);
+    if (currentView !== "home") {
+      setCurrentView("home");
+    }
     const prodSection = document.getElementById("featured-products");
     if (prodSection && typeof prodSection.scrollIntoView === "function") {
       prodSection.scrollIntoView({ behavior: "smooth" });
@@ -677,31 +711,12 @@ export default function App() {
     }
   };
 
-  const handleScrollToCategories = () => {
-    const catSection = document.getElementById("shop-categories");
-    if (catSection && typeof catSection.scrollIntoView === "function") {
-      catSection.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   const handleCategorySelect = (categorySlug) => {
     setSelectedCategory(categorySlug);
     setIsOffersOnly(false);
     const prodSection = document.getElementById("featured-products");
     if (prodSection && typeof prodSection.scrollIntoView === "function") {
       prodSection.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
-  const handleTabClick = (tabKey) => {
-    if (tabKey === "all") {
-      setSelectedCategory("all");
-      setIsOffersOnly(false);
-    } else if (tabKey === "offers") {
-      setIsOffersOnly(true);
-    } else {
-      setSelectedCategory(tabKey);
-      setIsOffersOnly(false);
     }
   };
 
@@ -749,6 +764,7 @@ export default function App() {
     }
   };
 
+  // 1. ADMIN PORTAL ROUTE
   if (currentView === "admin") {
     return (
       <>
@@ -769,6 +785,7 @@ export default function App() {
     );
   }
 
+  // 2. LOGIN ROUTE
   if (currentView === "login") {
     return (
       <>
@@ -787,6 +804,7 @@ export default function App() {
     );
   }
 
+  // 3. CHECKOUT ROUTE
   if (currentView === "checkout") {
     return (
       <div className="page">
@@ -797,21 +815,17 @@ export default function App() {
           onToggleMock={handleToggleMockMode}
           onNavigate={navigate}
         />
-        {/* Top utility bar */}
         <div className="top-bar">
           <div className="top-bar-inner">
             {topBarItems.map((item) => (
               <span className="top-bar-item" key={item.label}>
-                <span className="top-bar-icon" aria-hidden="true">
-                  {item.icon}
-                </span>
+                <span className="top-bar-icon" aria-hidden="true">{item.icon}</span>
                 {item.label}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Header */}
         <header className="header">
           <div className="header-inner">
             <div
@@ -836,11 +850,7 @@ export default function App() {
                     <span aria-hidden="true">👤</span>
                     <span className="user-name">{currentUser.fullName?.split(" ")[0] || currentUser.email}</span>
                   </span>
-                  <button
-                    type="button"
-                    className="btn-logout"
-                    onClick={handleLogout}
-                  >
+                  <button type="button" className="btn-logout" onClick={handleLogout}>
                     Logout
                   </button>
                 </div>
@@ -865,7 +875,6 @@ export default function App() {
           onOrderSuccess={handleOrderSuccess}
         />
 
-        {/* Footer */}
         <footer className="footer">
           <div className="footer-bottom">
             <p>© {new Date().getFullYear()} VERTEX. All rights reserved.</p>
@@ -875,36 +884,9 @@ export default function App() {
     );
   }
 
-  // Filter tabs built from live categories
-  const categoryTabs = categories.length > 0
-    ? categories.map((c) => ({ key: c.slug, label: c.name }))
-    : [
-        { key: "electronics", label: "Electronics" },
-        { key: "fasteners", label: "Fasteners" },
-        { key: "nuts", label: "Nuts" },
-      ];
-
-  const filterTabs = [
-    { key: "all", label: "All" },
-    ...categoryTabs,
-    { key: "offers", label: "Offers" },
-  ];
-
-  // Client-side offers filter fallback (reports gap where backend lacks offers query param)
-  const visibleProducts = isOffersOnly
-    ? products.filter((p) => p.tag || (p.mrp && Number(p.mrp) > Number(p.price)))
-    : products;
-
-  return (
-    <div className="page">
-      <MockDevBanner
-        currentUser={currentUser}
-        currentView={currentView}
-        onSimulateUser={handleSimulateUser}
-        onToggleMock={handleToggleMockMode}
-        onNavigate={navigate}
-      />
-      {/* Flash status banner */}
+  // Common Header component for Home, Products Catalogue, and Product Detail
+  const renderSharedHeader = () => (
+    <>
       {flashMessage && (
         <div className="vtx-flash-banner" role="status">
           <span>{flashMessage}</span>
@@ -914,7 +896,7 @@ export default function App() {
             onClick={() => setFlashMessage(null)}
             aria-label="Dismiss message"
           >
-            ×
+            ✕
           </button>
         </div>
       )}
@@ -925,9 +907,7 @@ export default function App() {
           <div className="top-bar-features">
             {topBarItems.map((item) => (
               <span className="top-bar-item" key={item.label}>
-                <span className="top-bar-icon" aria-hidden="true">
-                  {item.icon}
-                </span>
+                <span className="top-bar-icon" aria-hidden="true">{item.icon}</span>
                 {item.label}
               </span>
             ))}
@@ -938,10 +918,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* Header */}
+      {/* Main Header */}
       <header className="header">
         <div className="header-inner">
-          {/* Mobile hamburger menu button */}
           <button
             type="button"
             className={`vtx-hamburger-btn ${mobileMenuOpen ? "is-open" : ""}`}
@@ -971,11 +950,7 @@ export default function App() {
             </div>
           </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="search-bar"
-            role="search"
-          >
+          <form onSubmit={handleSearchSubmit} className="search-bar" role="search">
             <span className="search-icon-prefix" aria-hidden="true">🔍</span>
             <input
               type="text"
@@ -1040,6 +1015,22 @@ export default function App() {
                 <span aria-hidden="true">👤</span> Login / Register
               </button>
             )}
+
+            {/* Wishlist Header Action */}
+            <button
+              type="button"
+              className="header-action wishlist-action"
+              onClick={() => setWishlistOpen(true)}
+              aria-label={`Saved Wishlist with ${wishlistCount} items`}
+              title="View saved wishlist components"
+            >
+              <span aria-hidden="true">❤️</span> Wishlist
+              <span className="cart-badge" data-testid="wishlist-badge">
+                {wishlistCount}
+              </span>
+            </button>
+
+            {/* Cart Header Action */}
             <button
               type="button"
               className="header-action cart-action"
@@ -1065,15 +1056,19 @@ export default function App() {
               const handleNavClick = (e) => {
                 e.preventDefault();
                 if (item === "Home") {
+                  navigate("home");
                   handleClearAllFilters();
+                } else if (item === "Products") {
+                  handleNavigateCatalogWithCategory("all");
                 } else if (item === "Electronics") {
-                  handleCategorySelect("electronics");
+                  handleNavigateCatalogWithCategory("electronics");
                 } else if (item === "Screws & Fasteners") {
-                  handleCategorySelect("fasteners");
+                  handleNavigateCatalogWithCategory("fasteners");
                 } else if (item === "Nuts") {
-                  handleCategorySelect("nuts");
+                  handleNavigateCatalogWithCategory("nuts");
                 } else if (item === "Offers") {
                   setIsOffersOnly(true);
+                  if (currentView !== "home") navigate("home");
                   const prodSection = document.getElementById("featured-products");
                   if (prodSection && typeof prodSection.scrollIntoView === "function") {
                     prodSection.scrollIntoView({ behavior: "smooth" });
@@ -1082,10 +1077,11 @@ export default function App() {
               };
 
               const isNavActive =
-                (item === "Home" && selectedCategory === "all" && !isOffersOnly && !activeSearch) ||
-                (item === "Electronics" && selectedCategory === "electronics" && !isOffersOnly) ||
-                (item === "Screws & Fasteners" && selectedCategory === "fasteners" && !isOffersOnly) ||
-                (item === "Nuts" && selectedCategory === "nuts" && !isOffersOnly) ||
+                (item === "Home" && currentView === "home" && selectedCategory === "all" && !isOffersOnly) ||
+                (item === "Products" && currentView === "products" && selectedCatalogCategory === "all") ||
+                (item === "Electronics" && (selectedCategory === "electronics" || selectedCatalogCategory === "electronics")) ||
+                (item === "Screws & Fasteners" && (selectedCategory === "fasteners" || selectedCatalogCategory === "fasteners")) ||
+                (item === "Nuts" && (selectedCategory === "nuts" || selectedCatalogCategory === "nuts")) ||
                 (item === "Offers" && isOffersOnly);
 
               return (
@@ -1103,7 +1099,7 @@ export default function App() {
         </nav>
       </header>
 
-      {/* Mobile Navigation Drawer & Backdrop */}
+      {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
         <>
           <div
@@ -1137,30 +1133,23 @@ export default function App() {
                 <span className="vtx-mobile-nav-title">Catalog Navigation</span>
                 <div className="vtx-mobile-nav-links">
                   {navItems.map((item) => {
-                    const isNavActive =
-                      (item === "Home" && selectedCategory === "all" && !isOffersOnly && !activeSearch) ||
-                      (item === "Electronics" && selectedCategory === "electronics" && !isOffersOnly) ||
-                      (item === "Screws & Fasteners" && selectedCategory === "fasteners" && !isOffersOnly) ||
-                      (item === "Nuts" && selectedCategory === "nuts" && !isOffersOnly) ||
-                      (item === "Offers" && isOffersOnly);
-
                     const handleMobileNavClick = (e) => {
                       e.preventDefault();
                       setMobileMenuOpen(false);
                       if (item === "Home") {
+                        navigate("home");
                         handleClearAllFilters();
+                      } else if (item === "Products") {
+                        handleNavigateCatalogWithCategory("all");
                       } else if (item === "Electronics") {
-                        handleCategorySelect("electronics");
+                        handleNavigateCatalogWithCategory("electronics");
                       } else if (item === "Screws & Fasteners") {
-                        handleCategorySelect("fasteners");
+                        handleNavigateCatalogWithCategory("fasteners");
                       } else if (item === "Nuts") {
-                        handleCategorySelect("nuts");
+                        handleNavigateCatalogWithCategory("nuts");
                       } else if (item === "Offers") {
                         setIsOffersOnly(true);
-                        const prodSection = document.getElementById("featured-products");
-                        if (prodSection && typeof prodSection.scrollIntoView === "function") {
-                          prodSection.scrollIntoView({ behavior: "smooth" });
-                        }
+                        if (currentView !== "home") navigate("home");
                       }
                     };
 
@@ -1168,11 +1157,11 @@ export default function App() {
                       <button
                         type="button"
                         key={`mobile-${item}`}
-                        className={`vtx-mobile-nav-link ${isNavActive ? "active" : ""}`}
+                        className="vtx-mobile-nav-link"
                         onClick={handleMobileNavClick}
                       >
                         <span>{item}</span>
-                        <span aria-hidden="true" style={{ opacity: 0.5, fontSize: "0.85rem" }}>→</span>
+                        <span aria-hidden="true" style={{ opacity: 0.5 }}>→</span>
                       </button>
                     );
                   })}
@@ -1223,16 +1212,271 @@ export default function App() {
                     👤 Sign In / Register
                   </button>
                 )}
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", textAlign: "center", marginTop: "8px" }}>
-                  Pan-India Delivery • Verified Hardware Components
-                </div>
               </div>
             </div>
           </div>
         </>
       )}
+    </>
+  );
 
-      {/* Hero */}
+  // Common Shared Footer
+  const renderSharedFooter = () => (
+    <footer className="footer">
+      <div className="footer-inner">
+        <div className="footer-col">
+          <div className="brand footer-brand">
+            <img src={logo} alt="HV Vertex logo" className="brand-logo" />
+            <div className="brand-text">
+              <span className="brand-name">VERTEX</span>
+              <span className="brand-tagline">BUILD BETTER TOGETHER</span>
+            </div>
+          </div>
+          <p className="footer-about">
+            VERTEX is an online engineering components and precision hardware store.
+            Supplying automotive lithium-ion cells, microcontroller hardware, motor drivers,
+            and metric fasteners across India.
+          </p>
+        </div>
+
+        <div className="footer-col">
+          <h4>Catalogue</h4>
+          <ul>
+            <li>
+              <button
+                type="button"
+                className="footer-link-btn"
+                onClick={() => handleNavigateCatalogWithCategory("all")}
+              >
+                All Products
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="footer-link-btn"
+                onClick={() => handleNavigateCatalogWithCategory("electronics")}
+              >
+                Lithium Cells &amp; Electronics
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="footer-link-btn"
+                onClick={() => handleNavigateCatalogWithCategory("fasteners")}
+              >
+                Screws &amp; Fasteners
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="footer-link-btn"
+                onClick={() => handleNavigateCatalogWithCategory("nuts")}
+              >
+                Nuts &amp; Washers
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div className="footer-col">
+          <h4>Support &amp; Commercial</h4>
+          <ul>
+            <li>
+              <button type="button" className="footer-link-btn" onClick={() => setWishlistOpen(true)}>
+                Saved Wishlist ({wishlistCount})
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="footer-link-btn"
+                onClick={() => setQuoteProduct({ name: "Bulk Component Order", sku: "VTX-BULK-RFQ" })}
+              >
+                Request Commercial Quote
+              </button>
+            </li>
+            <li>
+              <button type="button" className="footer-link-btn" onClick={(e) => e.preventDefault()}>
+                Pan-India Shipping Policy
+              </button>
+            </li>
+            <li>
+              <button type="button" className="footer-link-btn" onClick={(e) => e.preventDefault()}>
+                GST Tax Invoicing
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div className="footer-col">
+          <h4>Contact &amp; Hub</h4>
+          <p>📍 Hyderabad, Telangana, India</p>
+          <p>✉️ sales@vertex.in</p>
+          <p>📞 +91 98765 43210</p>
+          <p style={{ marginTop: "8px", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+            ⚡ Verified Technical Specifications
+          </p>
+        </div>
+      </div>
+
+      <div className="footer-bottom">
+        <p>© {new Date().getFullYear()} VERTEX Engineering &amp; Supplies. All rights reserved.</p>
+      </div>
+    </footer>
+  );
+
+  // 4. DEDICATED PRODUCTS CATALOGUE VIEW
+  if (currentView === "products") {
+    return (
+      <div className="page">
+        <MockDevBanner
+          currentUser={currentUser}
+          currentView={currentView}
+          onSimulateUser={handleSimulateUser}
+          onToggleMock={handleToggleMockMode}
+          onNavigate={navigate}
+        />
+        {renderSharedHeader()}
+
+        <ProductListPage
+          categories={categories}
+          products={products}
+          loading={productsLoading}
+          error={productsError}
+          initialCategory={selectedCatalogCategory}
+          initialSubcat={selectedCatalogSubcat}
+          initialSearch={activeSearch}
+          onAddToCart={handleAddToCart}
+          onViewDetails={handleOpenProductDetail}
+          onNavigateHome={() => navigate("home")}
+          currentUser={currentUser}
+        />
+
+        {renderSharedFooter()}
+
+        <CartDrawer
+          isOpen={cartOpen}
+          onClose={() => setCartOpen(false)}
+          cart={cart}
+          loading={cartLoading}
+          pendingAction={pendingCartAction}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onClearCart={handleClearCart}
+          cartError={cartError}
+          onClearError={() => setCartError(null)}
+          onNavigateLogin={() => navigate("login", null, "/")}
+          onProceedToCheckout={handleProceedToCheckout}
+          currentUser={currentUser}
+        />
+
+        <WishlistDrawer
+          isOpen={wishlistOpen}
+          onClose={() => setWishlistOpen(false)}
+          onAddToCart={handleAddToCart}
+          onViewDetails={handleOpenProductDetail}
+        />
+      </div>
+    );
+  }
+
+  // 5. DEDICATED PRODUCT DETAIL VIEW
+  if (currentView === "product-detail") {
+    return (
+      <div className="page">
+        <MockDevBanner
+          currentUser={currentUser}
+          currentView={currentView}
+          onSimulateUser={handleSimulateUser}
+          onToggleMock={handleToggleMockMode}
+          onNavigate={navigate}
+        />
+        {renderSharedHeader()}
+
+        {detailLoading ? (
+          <div className="vtx-detail-page" style={{ padding: "60px 20px", textAlign: "center" }}>
+            <div className="product-card-skeleton" style={{ maxWidth: "600px", margin: "0 auto" }}>
+              <div className="skeleton-thumb" style={{ height: "300px" }} />
+              <div className="skeleton-body">
+                <div className="skeleton-line skeleton-title" />
+                <div className="skeleton-line skeleton-price" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <ProductDetailPage
+            product={detailProduct}
+            relatedProducts={detailRelated}
+            onAddToCart={handleAddToCart}
+            onNavigateHome={() => navigate("home")}
+            onNavigateCatalog={(catSlug, subSlug) => handleNavigateCatalogWithCategory(catSlug || "all", subSlug || "all")}
+            onSelectRelatedProduct={(rel) => handleOpenProductDetail(rel)}
+            currentUser={currentUser}
+          />
+        )}
+
+        {renderSharedFooter()}
+
+        <CartDrawer
+          isOpen={cartOpen}
+          onClose={() => setCartOpen(false)}
+          cart={cart}
+          loading={cartLoading}
+          pendingAction={pendingCartAction}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onClearCart={handleClearCart}
+          cartError={cartError}
+          onClearError={() => setCartError(null)}
+          onNavigateLogin={() => navigate("login", null, "/")}
+          onProceedToCheckout={handleProceedToCheckout}
+          currentUser={currentUser}
+        />
+
+        <WishlistDrawer
+          isOpen={wishlistOpen}
+          onClose={() => setWishlistOpen(false)}
+          onAddToCart={handleAddToCart}
+          onViewDetails={handleOpenProductDetail}
+        />
+      </div>
+    );
+  }
+
+  // 6. DEFAULT STOREFRONT HOME VIEW
+  const categoryTabs = categories.length > 0
+    ? categories.map((c) => ({ key: c.slug, label: c.name }))
+    : [
+        { key: "electronics", label: "Electronics" },
+        { key: "fasteners", label: "Fasteners" },
+        { key: "nuts", label: "Nuts" },
+      ];
+
+  const filterTabs = [
+    { key: "all", label: "All" },
+    ...categoryTabs,
+    { key: "offers", label: "Offers" },
+  ];
+
+  const visibleProducts = isOffersOnly
+    ? products.filter((p) => p.tag || (p.mrp && Number(p.mrp) > Number(p.price)))
+    : products;
+
+  return (
+    <div className="page">
+      <MockDevBanner
+        currentUser={currentUser}
+        currentView={currentView}
+        onSimulateUser={handleSimulateUser}
+        onToggleMock={handleToggleMockMode}
+        onNavigate={navigate}
+      />
+      {renderSharedHeader()}
+
+      {/* Hero Section */}
       <section className="hero">
         <div className="hero-inner">
           <div className="hero-copy">
@@ -1265,9 +1509,9 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn-outline-light"
-                onClick={handleScrollToCategories}
+                onClick={() => handleNavigateCatalogWithCategory("all")}
               >
-                Browse Categories ↓
+                Browse Catalogue →
               </button>
             </div>
             <div className="hero-perks-row">
@@ -1340,13 +1584,13 @@ export default function App() {
         </div>
       </section>
 
-      {/* Shop by category */}
+      {/* Shop by Category Section */}
       <section className="section" id="shop-categories">
         <div className="section-head">
           <h2>Shop by Category</h2>
           <button
             type="button"
-            onClick={() => handleCategorySelect("all")}
+            onClick={() => handleNavigateCatalogWithCategory("all")}
             className="link-arrow"
           >
             View All Categories →
@@ -1369,11 +1613,7 @@ export default function App() {
             <div className="error-icon" aria-hidden="true">⚠️</div>
             <h3>Unable to Load Categories</h3>
             <p>{categoriesError}</p>
-            <button
-              type="button"
-              className="btn-retry"
-              onClick={loadCategories}
-            >
+            <button type="button" className="btn-retry" onClick={loadCategories}>
               ↻ Retry
             </button>
           </div>
@@ -1397,7 +1637,7 @@ export default function App() {
                     <button
                       type="button"
                       className="link-text"
-                      onClick={() => handleCategorySelect(cat.slug)}
+                      onClick={() => handleNavigateCatalogWithCategory(cat.slug)}
                     >
                       Explore {cat.name} →
                     </button>
@@ -1410,7 +1650,7 @@ export default function App() {
         )}
       </section>
 
-      {/* Featured products */}
+      {/* Featured Products Section */}
       <section className="section" id="featured-products">
         <div className="section-head">
           <div style={{ display: "flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
@@ -1435,7 +1675,17 @@ export default function App() {
                   role="tab"
                   aria-selected={isActive}
                   className={"filter-tab" + (isActive ? " active" : "")}
-                  onClick={() => handleTabClick(tab.key)}
+                  onClick={() => {
+                    if (tab.key === "all") {
+                      setSelectedCategory("all");
+                      setIsOffersOnly(false);
+                    } else if (tab.key === "offers") {
+                      setIsOffersOnly(true);
+                    } else {
+                      setSelectedCategory(tab.key);
+                      setIsOffersOnly(false);
+                    }
+                  }}
                 >
                   {tab.label}
                 </button>
@@ -1444,14 +1694,13 @@ export default function App() {
           </div>
           <button
             type="button"
-            onClick={handleClearAllFilters}
+            onClick={() => handleNavigateCatalogWithCategory("all")}
             className="link-arrow"
           >
-            View All →
+            Open Full Catalogue →
           </button>
         </div>
 
-        {/* Active search filter banner */}
         {activeSearch && (
           <div className="search-active-bar" role="status">
             <span className="search-active-label">
@@ -1470,7 +1719,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Loading state */}
         {productsLoading ? (
           <div className="product-grid" role="status" aria-label="Loading products">
             {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -1489,11 +1737,7 @@ export default function App() {
             <div className="error-icon" aria-hidden="true">⚠️</div>
             <h3>Unable to Load Products</h3>
             <p>{productsError}</p>
-            <button
-              type="button"
-              className="btn-retry"
-              onClick={loadProducts}
-            >
+            <button type="button" className="btn-retry" onClick={loadProducts}>
               ↻ Retry
             </button>
           </div>
@@ -1504,17 +1748,9 @@ export default function App() {
             <p>
               {activeSearch
                 ? `We couldn't find any products matching "${activeSearch}".`
-                : isOffersOnly
-                ? "There are currently no products with active discounts or offers in the selected catalog."
-                : selectedCategory !== "all"
-                ? "No products are currently available in this category."
-                : "No products are currently available in the catalog."}
+                : "No products are currently available in this category."}
             </p>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleClearAllFilters}
-            >
+            <button type="button" className="btn btn-primary" onClick={handleClearAllFilters}>
               Clear All Filters
             </button>
           </div>
@@ -1522,10 +1758,11 @@ export default function App() {
           <div className="product-grid">
             {visibleProducts.map((p) => (
               <ProductCard
-                product={p}
                 key={p.id || p.slug}
+                product={p}
                 onAddToCart={handleAddToCart}
-                onViewDetails={setSelectedProduct}
+                onViewDetails={handleOpenProductDetail}
+                onRequestQuote={(prod) => setQuoteProduct(prod)}
                 isAdding={pendingCartAction?.id === p.variants?.[0]?.id}
               />
             ))}
@@ -1533,14 +1770,22 @@ export default function App() {
         )}
       </section>
 
-      {/* Reference lists: fastener & nut types, pulled from the product report */}
+      {/* Reference lists: fastener & nut types from the official category list */}
       <section className="section reference-section">
         <div className="reference-grid">
           <div className="reference-card vtx-reveal vtx-stagger-1">
             <h3>Screws &amp; Fasteners — Types</h3>
             <ul>
               {fastenerTypes.map((t) => (
-                <li key={t}>{t}</li>
+                <li key={t}>
+                  <button
+                    type="button"
+                    className="vtx-ref-link"
+                    onClick={() => handleNavigateCatalogWithCategory("fasteners")}
+                  >
+                    {t} →
+                  </button>
+                </li>
               ))}
             </ul>
           </div>
@@ -1548,14 +1793,22 @@ export default function App() {
             <h3>Nut Types</h3>
             <ul>
               {nutTypes.map((t) => (
-                <li key={t}>{t}</li>
+                <li key={t}>
+                  <button
+                    type="button"
+                    className="vtx-ref-link"
+                    onClick={() => handleNavigateCatalogWithCategory("nuts")}
+                  >
+                    {t} →
+                  </button>
+                </li>
               ))}
             </ul>
           </div>
         </div>
       </section>
 
-      {/* Bulk orders banner */}
+      {/* Bulk Orders Banner */}
       <section className="bulk-banner vtx-reveal">
         <div className="bulk-copy">
           <h3>
@@ -1567,7 +1820,13 @@ export default function App() {
             Get special pricing for bulk orders. Ideal for industries,
             educational institutions and makers.
           </p>
-          <button className="btn btn-primary">Request a Quote →</button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setQuoteProduct({ name: "Bulk Hardware Inquiry", sku: "VTX-BULK-TIER" })}
+          >
+            Request a Quote →
+          </button>
         </div>
         <div className="bulk-perks">
           <div>
@@ -1619,13 +1878,21 @@ export default function App() {
         </div>
       </section>
 
-      {/* Brands strip */}
+      {/* Brands Strip */}
       <section className="brands-strip">
         <div className="brands-inner">
           <span className="brands-label">Featured Brands</span>
           <div className="brand-tags">
             {brands.map((b) => (
-              <span className="brand-tag" key={b}>
+              <span
+                className="brand-tag"
+                key={b}
+                onClick={() => {
+                  navigate("products", "dashboard", null, null, `brand=${encodeURIComponent(b)}`);
+                }}
+                style={{ cursor: "pointer" }}
+                title={`Browse ${b} products`}
+              >
                 {b}
               </span>
             ))}
@@ -1633,95 +1900,26 @@ export default function App() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="footer-col">
-            <div className="brand footer-brand">
-              <img src={logo} alt="HV Vertex logo" className="brand-logo" />
-              <div className="brand-text">
-                <span className="brand-name">VERTEX</span>
-                <span className="brand-tagline">BUILD BETTER TOGETHER</span>
-              </div>
-            </div>
-            <p className="footer-about">
-              VERTEX is an online store for engineering components, fasteners
-              and electronics. Serving makers, industries and institutions
-              across India.
-            </p>
-          </div>
+      {renderSharedFooter()}
 
-          <div className="footer-col">
-            <h4>Quick Links</h4>
-            <ul>
-              {navItems.slice(0, 5).map((item) => (
-                <li key={item}>
-                  <button type="button" className="footer-link-btn" onClick={(e) => e.preventDefault()}>
-                    {item}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="footer-col">
-            <h4>Support</h4>
-            <ul>
-              <li>
-                <button type="button" className="footer-link-btn" onClick={(e) => e.preventDefault()}>
-                  Help Center
-                </button>
-              </li>
-              <li>
-                <button type="button" className="footer-link-btn" onClick={(e) => e.preventDefault()}>
-                  Track Order
-                </button>
-              </li>
-              <li>
-                <button type="button" className="footer-link-btn" onClick={(e) => e.preventDefault()}>
-                  Shipping Policy
-                </button>
-              </li>
-              <li>
-                <button type="button" className="footer-link-btn" onClick={(e) => e.preventDefault()}>
-                  Returns &amp; Refunds
-                </button>
-              </li>
-            </ul>
-          </div>
-
-          <div className="footer-col">
-            <h4>Contact</h4>
-            <p>📍 Hyderabad, Telangana, India</p>
-            <p>✉️ support@vertex.in</p>
-            <p>📞 +91 98765 43210</p>
-          </div>
-        </div>
-
-        <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} VERTEX. All rights reserved.</p>
-        </div>
-      </footer>
-
-      {/* Product Technical Specifications Modal */}
-      {selectedProduct && (
+      {/* Quick Specs Modal (if opened via Specs button modal fallback) */}
+      {selectedQuickProduct && (
         <div
           className="vtx-modal-backdrop"
-          onClick={() => setSelectedProduct(null)}
+          onClick={() => setSelectedQuickProduct(null)}
           role="dialog"
           aria-modal="true"
-          aria-labelledby="product-spec-title"
         >
           <div className="vtx-modal" onClick={(e) => e.stopPropagation()}>
             <div className="vtx-modal-header">
               <div>
-                <span className="vtx-modal-badge">{selectedProduct.category?.name || "Hardware Component"}</span>
-                <h3 id="product-spec-title" className="vtx-modal-title">{selectedProduct.name}</h3>
+                <span className="vtx-modal-badge">{selectedQuickProduct.category?.name || "Hardware Component"}</span>
+                <h3 className="vtx-modal-title">{selectedQuickProduct.name}</h3>
               </div>
               <button
                 type="button"
                 className="vtx-modal-close"
-                onClick={() => setSelectedProduct(null)}
+                onClick={() => setSelectedQuickProduct(null)}
                 aria-label="Close modal"
               >
                 ✕
@@ -1730,36 +1928,27 @@ export default function App() {
             <div className="vtx-modal-body">
               <div className="vtx-spec-grid">
                 <div className="vtx-spec-thumb">
-                  {selectedProduct.imageUrl ? (
-                    <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="vtx-spec-img" />
+                  {selectedQuickProduct.imageUrl ? (
+                    <img src={selectedQuickProduct.imageUrl} alt={selectedQuickProduct.name} className="vtx-spec-img" />
                   ) : (
                     <div className="vtx-spec-placeholder">
-                      {selectedProduct.name ? selectedProduct.name[0].toUpperCase() : "P"}
+                      {selectedQuickProduct.name ? selectedQuickProduct.name[0].toUpperCase() : "P"}
                     </div>
                   )}
                 </div>
                 <div className="vtx-spec-details">
                   <div className="vtx-spec-line">
-                    <strong>SKU Code:</strong>{" "}
-                    <code>{selectedProduct.variants?.[0]?.sku || selectedProduct.sku || "VTX-GEN-SKU"}</code>
+                    <strong>SKU Code:</strong> <code>{selectedQuickProduct.variants?.[0]?.sku || selectedQuickProduct.sku || "VTX-GEN-SKU"}</code>
                   </div>
                   <div className="vtx-spec-line">
                     <strong>Price:</strong>{" "}
-                    <span className="vtx-spec-price">₹{Number(selectedProduct.price || 0).toLocaleString("en-IN")}</span>
-                    {selectedProduct.variants?.[0]?.packSize && (
-                      <span className="vtx-spec-unit"> / {selectedProduct.variants[0].packSize}</span>
+                    {selectedQuickProduct.price !== null && selectedQuickProduct.price !== undefined ? (
+                      <span className="vtx-spec-price">₹{Number(selectedQuickProduct.price).toLocaleString("en-IN")}</span>
+                    ) : (
+                      <span className="vtx-spec-price" style={{ color: "var(--orange-dark)" }}>Quote on Request</span>
                     )}
                   </div>
-                  <div className="vtx-spec-line">
-                    <strong>Stock Status:</strong>{" "}
-                    <span className={selectedProduct.inStock !== false ? "vtx-stock-active" : "vtx-stock-out"}>
-                      {selectedProduct.inStock !== false ? "● In Stock (Warehouse Ready)" : "○ Backorder / Out of Stock"}
-                    </span>
-                  </div>
-                  <p className="vtx-spec-desc">
-                    {selectedProduct.description ||
-                      "Certified industrial engineering component designed for high-reliability circuit automation, robotics assemblies, and precision mechanical fixtures."}
-                  </p>
+                  <p className="vtx-spec-desc">{selectedQuickProduct.description}</p>
                 </div>
               </div>
             </div>
@@ -1767,7 +1956,7 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn-outline"
-                onClick={() => setSelectedProduct(null)}
+                onClick={() => setSelectedQuickProduct(null)}
               >
                 Close
               </button>
@@ -1775,17 +1964,24 @@ export default function App() {
                 type="button"
                 className="btn btn-primary"
                 onClick={() => {
-                  handleAddToCart(selectedProduct, selectedProduct.variants?.[0]);
-                  setSelectedProduct(null);
+                  handleOpenProductDetail(selectedQuickProduct);
+                  setSelectedQuickProduct(null);
                 }}
-                disabled={selectedProduct.inStock === false}
               >
-                🛒 Add to Cart
+                Full Product Page →
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Commercial Request a Quote Modal */}
+      <QuoteModal
+        product={quoteProduct}
+        isOpen={Boolean(quoteProduct)}
+        onClose={() => setQuoteProduct(null)}
+        currentUser={currentUser}
+      />
 
       {/* Shopping Cart Drawer */}
       <CartDrawer
@@ -1802,6 +1998,14 @@ export default function App() {
         onNavigateLogin={() => navigate("login", null, "/")}
         onProceedToCheckout={handleProceedToCheckout}
         currentUser={currentUser}
+      />
+
+      {/* Wishlist Drawer */}
+      <WishlistDrawer
+        isOpen={wishlistOpen}
+        onClose={() => setWishlistOpen(false)}
+        onAddToCart={handleAddToCart}
+        onViewDetails={handleOpenProductDetail}
       />
     </div>
   );

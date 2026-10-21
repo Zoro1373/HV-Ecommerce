@@ -1,13 +1,13 @@
 /**
  * VERTEX Mock Catalog API Service
  * 
- * Provides simulated catalog browsing, search, category filtering, and product details.
+ * Provides simulated catalog browsing, search, category & subcategory filtering,
+ * brand filtering, specification queries, and product details.
  */
 
 import { MOCK_CATEGORIES, MOCK_PRODUCTS } from "./mockData";
 
 export async function getCategories() {
-  // Simulate standard network micro-delay
   await new Promise((r) => setTimeout(r, 40));
   return {
     success: true,
@@ -31,7 +31,9 @@ export async function getCategoryBySlug(slug) {
   }
 
   const products = MOCK_PRODUCTS.filter(
-    (p) => p.categoryId === category.id || p.category?.slug === category.slug
+    (p) =>
+      p.categoryId === category.id ||
+      p.category?.slug?.toLowerCase() === category.slug.toLowerCase()
   );
 
   return {
@@ -44,9 +46,12 @@ export async function getCategoryBySlug(slug) {
 export async function getProducts({
   q = "",
   category = "",
+  subcategory = "",
+  subcat = "",
   brand = "",
   minPrice = "",
   maxPrice = "",
+  inStockOnly = false,
   sort = "newest",
   page = 1,
   limit = 12,
@@ -55,7 +60,7 @@ export async function getProducts({
 
   let filtered = [...MOCK_PRODUCTS];
 
-  // 1. Keyword search (case-insensitive across name, description, brand, tag, SKU, partNumber)
+  // 1. Keyword search (case-insensitive across name, description, brand, tag, SKU, partNumber, specs)
   if (q && q.trim()) {
     const term = q.trim().toLowerCase();
     filtered = filtered.filter((product) => {
@@ -63,52 +68,102 @@ export async function getProducts({
       const matchDesc = product.description?.toLowerCase().includes(term);
       const matchBrand = product.brand?.toLowerCase().includes(term);
       const matchTag = product.tag?.toLowerCase().includes(term);
+      const matchSubcat = product.subcategory?.name?.toLowerCase().includes(term) ||
+                          product.subcategory?.slug?.toLowerCase().includes(term);
+      const matchCat = product.category?.name?.toLowerCase().includes(term);
+      
       const matchVariant = product.variants?.some(
         (v) =>
           v.sku?.toLowerCase().includes(term) ||
           v.partNumber?.toLowerCase().includes(term) ||
           v.name?.toLowerCase().includes(term)
       );
-      return matchName || matchDesc || matchBrand || matchTag || matchVariant;
+
+      const matchSpecs = product.specs
+        ? Object.entries(product.specs).some(
+            ([key, val]) =>
+              key.toLowerCase().includes(term) ||
+              String(val).toLowerCase().includes(term)
+          )
+        : false;
+
+      return matchName || matchDesc || matchBrand || matchTag || matchSubcat || matchCat || matchVariant || matchSpecs;
+    });
+
+    // Prioritize direct name matches so searched products rank at the top
+    filtered.sort((a, b) => {
+      const aName = a.name?.toLowerCase().includes(term);
+      const bName = b.name?.toLowerCase().includes(term);
+      if (aName && !bName) return -1;
+      if (!aName && bName) return 1;
+      return 0;
     });
   }
 
-  // 2. Category filter
+  // 2. Parent Category filter
   if (category && category.trim() && category !== "all") {
     const cat = category.trim().toLowerCase();
     filtered = filtered.filter(
-      (p) => p.category?.slug?.toLowerCase() === cat || p.categoryId === cat
+      (p) =>
+        p.category?.slug?.toLowerCase() === cat ||
+        p.categoryId?.toLowerCase() === cat
     );
   }
 
-  // 3. Brand filter
-  if (brand && brand.trim()) {
+  // 3. Subcategory filter
+  const targetSubcat = (subcategory || subcat || "").trim().toLowerCase();
+  if (targetSubcat && targetSubcat !== "all") {
+    filtered = filtered.filter(
+      (p) =>
+        p.subcategory?.slug?.toLowerCase() === targetSubcat ||
+        p.subcategory?.id?.toLowerCase() === targetSubcat ||
+        p.subcategory?.name?.toLowerCase() === targetSubcat
+    );
+  }
+
+  // 4. Brand filter
+  if (brand && brand.trim() && brand !== "all") {
     const b = brand.trim().toLowerCase();
     filtered = filtered.filter((p) => p.brand?.toLowerCase() === b);
   }
 
-  // 4. Price range filter
+  // 5. In-Stock filter
+  if (inStockOnly) {
+    filtered = filtered.filter((p) => p.inStock !== false);
+  }
+
+  // 6. Price range filter
   if (minPrice !== "" && !isNaN(minPrice)) {
     const min = Number(minPrice);
-    filtered = filtered.filter((p) => Number(p.price) >= min);
+    filtered = filtered.filter((p) => p.price !== null && Number(p.price) >= min);
   }
   if (maxPrice !== "" && !isNaN(maxPrice)) {
     const max = Number(maxPrice);
-    filtered = filtered.filter((p) => Number(p.price) <= max);
+    filtered = filtered.filter((p) => p.price !== null && Number(p.price) <= max);
   }
 
-  // 5. Sorting
+  // 7. Sorting
   if (sort === "price_asc") {
-    filtered.sort((a, b) => Number(a.price) - Number(b.price));
+    filtered.sort((a, b) => {
+      if (a.price === null && b.price === null) return 0;
+      if (a.price === null) return 1;
+      if (b.price === null) return -1;
+      return Number(a.price) - Number(b.price);
+    });
   } else if (sort === "price_desc") {
-    filtered.sort((a, b) => Number(b.price) - Number(a.price));
+    filtered.sort((a, b) => {
+      if (a.price === null && b.price === null) return 0;
+      if (a.price === null) return 1;
+      if (b.price === null) return -1;
+      return Number(b.price) - Number(a.price);
+    });
   } else if (sort === "name_asc") {
     filtered.sort((a, b) => a.name.localeCompare(b.name));
   } else if (sort === "name_desc") {
     filtered.sort((a, b) => b.name.localeCompare(a.name));
   }
 
-  // 6. Pagination
+  // 8. Pagination
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.max(1, parseInt(limit, 10) || 12);
   const totalItems = filtered.length;
@@ -131,9 +186,14 @@ export async function getProducts({
 
 export async function getProductBySlug(slug) {
   await new Promise((r) => setTimeout(r, 40));
-  const decoded = decodeURIComponent(slug).toLowerCase();
+  if (!slug) {
+    const error = new Error("Product slug is required.");
+    error.status = 400;
+    throw error;
+  }
+  const decoded = decodeURIComponent(slug).toLowerCase().trim();
   const product = MOCK_PRODUCTS.find(
-    (p) => p.slug.toLowerCase() === decoded || p.id === decoded
+    (p) => p.slug.toLowerCase() === decoded || p.id.toLowerCase() === decoded
   );
 
   if (!product) {
@@ -143,8 +203,16 @@ export async function getProductBySlug(slug) {
     throw error;
   }
 
+  const related = MOCK_PRODUCTS.filter(
+    (p) =>
+      p.id !== product.id &&
+      (p.subcategory?.slug === product.subcategory?.slug ||
+        p.category?.slug === product.category?.slug)
+  ).slice(0, 4);
+
   return {
     success: true,
     product,
+    relatedProducts: related,
   };
 }

@@ -2709,3 +2709,35 @@ button.header-action.cart-action:hover {
   font-weight: 700;
 }
 
+/* Header Wishlist Action & Reference Links */
+.wishlist-action {
+  position: relative;
+}
+
+.wishlist-action .cart-badge {
+  background: #ef4444;
+}
+
+button.header-action.wishlist-action:hover .cart-badge {
+  transform: scale(1.1);
+}
+
+.vtx-ref-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-mid);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.vtx-ref-link:hover {
+  color: var(--cyan-dark);
+  text-decoration: underline;
+  transform: translateX(2px);
+}
+
+

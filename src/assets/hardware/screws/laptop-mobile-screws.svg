@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGradLaptop" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </radialGradient>
+
+    <!-- Matte black zinc coating gradient -->
+    <linearGradient id="blackZincGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="18%" stop-color="#475569"/>
+      <stop offset="38%" stop-color="#334155"/>
+      <stop offset="70%" stop-color="#0f172a"/>
+      <stop offset="88%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <radialGradient id="blackZincDome" cx="42%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="30%" stop-color="#334155"/>
+      <stop offset="70%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </radialGradient>
+
+    <linearGradient id="microPhillipsShadow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="60%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <linearGradient id="microThreadTooth" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="25%" stop-color="#64748b"/>
+      <stop offset="50%" stop-color="#334155"/>
+      <stop offset="80%" stop-color="#475569"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <filter id="softShadowLaptop" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+    </filter>
+  </defs>
+
+  <!-- Clean Studio Background -->
+  <rect width="500" height="500" fill="url(#bgGradLaptop)" rx="16"/>
+  <circle cx="250" cy="250" r="215" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,6"/>
+  <path d="M 250 25 L 250 475 M 25 250 L 475 250" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- Soft Contact Drop Shadow -->
+  <ellipse cx="250" cy="445" rx="70" ry="12" fill="#0f172a" fill-opacity="0.16" filter="url(#softShadowLaptop)"/>
+
+  <!-- Technical Head / Drive Inset Badge (Top Right) -->
+  <g transform="translate(370, 30)">
+    <circle cx="45" cy="45" r="42" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+    <circle cx="45" cy="45" r="36" fill="url(#blackZincDome)" stroke="#334155" stroke-width="1"/>
+    <!-- Micro Cross / Phillips Inset -->
+    <g fill="url(#microPhillipsShadow)" stroke="#020617" stroke-width="0.8">
+      <rect x="42" y="25" width="6" height="40" rx="1"/>
+      <rect x="25" y="42" width="40" height="6" rx="1"/>
+      <circle cx="45" cy="45" r="3" fill="#020617"/>
+    </g>
+    <text x="45" y="102" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#334155" letter-spacing="0.5">MICRO PH00</text>
+  </g>
+
+  <!-- Spec Tag (Top Left) -->
+  <g transform="translate(25, 30)">
+    <rect width="125" height="24" rx="4" fill="#0f172a" fill-opacity="0.06" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="62" y="16" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="#7c3aed">M1.2 - M2.5 MICRO</text>
+    <rect y="28" width="96" height="20" rx="3" fill="#7c3aed" fill-opacity="0.1"/>
+    <text x="48" y="42" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#6d28d9">BLACK ZINC</text>
+  </g>
+
+  <!-- MAIN SCREW (Micro Laptop & Mobile Screw) -->
+  <!-- 1. Micro Shank Core Body -->
+  <rect x="225" y="145" width="50" height="255" fill="url(#blackZincGrad)" stroke="#0f172a" stroke-width="1.5"/>
+
+  <!-- 2. Fine Pitch Metric Miniature Threads (densely packed) -->
+  <g stroke="#020617" stroke-width="0.8">
+    <polygon points="221,165 279,173 279,180 221,172" fill="url(#microThreadTooth)"/>
+    <polygon points="221,180 279,188 279,195 221,187" fill="url(#microThreadTooth)"/>
+    <polygon points="221,195 279,203 279,210 221,202" fill="url(#microThreadTooth)"/>
+    <polygon points="221,210 279,218 279,225 221,217" fill="url(#microThreadTooth)"/>
+    <polygon points="221,225 279,233 279,240 221,232" fill="url(#microThreadTooth)"/>
+    <polygon points="221,240 279,248 279,255 221,247" fill="url(#microThreadTooth)"/>
+    <polygon points="221,255 279,263 279,270 221,262" fill="url(#microThreadTooth)"/>
+    <polygon points="221,270 279,278 279,285 221,277" fill="url(#microThreadTooth)"/>
+    <polygon points="221,285 279,293 279,300 221,292" fill="url(#microThreadTooth)"/>
+    <polygon points="221,300 279,308 279,315 221,307" fill="url(#microThreadTooth)"/>
+    <polygon points="221,315 279,323 279,330 221,322" fill="url(#microThreadTooth)"/>
+    <polygon points="221,330 279,338 279,345 221,337" fill="url(#microThreadTooth)"/>
+    <polygon points="221,345 279,353 279,360 221,352" fill="url(#microThreadTooth)"/>
+    <polygon points="221,360 279,368 279,375 221,367" fill="url(#microThreadTooth)"/>
+    <polygon points="221,375 279,383 279,390 221,382" fill="url(#microThreadTooth)"/>
+  </g>
+
+  <!-- 3. Micro Precision Chamfer Tip -->
+  <polygon points="225,400 275,400 268,418 232,418" fill="url(#blackZincGrad)" stroke="#0f172a" stroke-width="1.5"/>
+  <ellipse cx="250" cy="418" rx="18" ry="3" fill="#1e293b"/>
+
+  <!-- 4. Ultra-Thin Wafer / Low-Profile Pan Head -->
+  <rect x="180" y="136" width="140" height="9" rx="2" fill="url(#blackZincGrad)" stroke="#0f172a" stroke-width="1.5"/>
+  <path d="M 180 138 C 180 102, 320 102, 320 138 Z" fill="url(#blackZincDome)" stroke="#0f172a" stroke-width="2"/>
+
+  <!-- 5. Micro Phillips Recess in Thin Head -->
+  <g transform="translate(250, 122)">
+    <polygon points="-4,-20 4,-20 3,20 -3,20" fill="url(#microPhillipsShadow)" stroke="#020617" stroke-width="1"/>
+    <polygon points="-20,-4 20,-4 20,3 -20,3" fill="url(#microPhillipsShadow)" stroke="#020617" stroke-width="1"/>
+    <circle cx="0" cy="0" r="3" fill="#020617"/>
+    <line x1="-20" y1="-4" x2="20" y2="-4" stroke="#64748b" stroke-width="0.8"/>
+    <line x1="-4" y1="-20" x2="-4" y2="20" stroke="#64748b" stroke-width="0.8"/>
+  </g>
+
+  <!-- Satin sheen highlight curves -->
+  <path d="M 198 126 A 45 18 0 0 1 234 110" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/>
+  <line x1="236" y1="145" x2="236" y2="398" stroke="#94a3b8" stroke-width="2" stroke-opacity="0.4"/>
+
+  <!-- Mini Electronics Repair Icons: Phone + Laptop outline badge -->
+  <g transform="translate(30, 400)" opacity="0.7">
+    <!-- Tiny laptop -->
+    <rect x="0" y="10" width="30" height="18" rx="2" fill="none" stroke="#64748b" stroke-width="1.5"/>
+    <line x1="-4" y1="28" x2="34" y2="28" stroke="#64748b" stroke-width="2"/>
+    <!-- Tiny phone -->
+    <rect x="42" y="6" width="14" height="24" rx="2" fill="none" stroke="#64748b" stroke-width="1.5"/>
+    <circle cx="49" cy="26" r="1.5" fill="#64748b"/>
+  </g>
+
+  <!-- Bottom Label Bar -->
+  <g transform="translate(0, 460)">
+    <text x="250" y="15" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#1e293b" letter-spacing="0.5">LAPTOP &amp; MOBILE PRECISION SCREWS • BLACK ZINC</text>
+  </g>
+</svg>

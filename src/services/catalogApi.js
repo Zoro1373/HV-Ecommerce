@@ -1,11 +1,9 @@
 /**
  * VERTEX Customer Storefront Catalog API Service
  * 
- * Provides client methods to interact with public catalog and category endpoints.
- * Enforces:
- * - credentials: "include" for HttpOnly session cookie transmission.
- * - X-Requested-With: "XMLHttpRequest" for strict CSRF protection.
- * - Standardized error handling and parameter formatting.
+ * Provides client methods to interact with catalog and category endpoints.
+ * Integrates with live backend when available and provides seamless fallback
+ * to centralized catalog data when backend is offline.
  */
 
 import { isMockApiEnabled } from "../mock/mockConfig";
@@ -47,57 +45,60 @@ async function handleResponse(response) {
 }
 
 /**
- * Fetches all active top-level categories and subcategories from GET /api/categories.
+ * Fetches all active top-level categories and subcategories.
  */
 export async function getCategories() {
   if (isMockApiEnabled()) {
     return mockCatalogApi.getCategories();
   }
 
-  const response = await fetch(`${API_BASE}/api/categories`, {
-    method: "GET",
-    headers: defaultHeaders,
-    credentials: "include",
-  });
-
-  return handleResponse(response);
+  try {
+    const response = await fetch(`${API_BASE}/api/categories`, {
+      method: "GET",
+      headers: defaultHeaders,
+      credentials: "include",
+    });
+    return await handleResponse(response);
+  } catch (err) {
+    // Graceful offline fallback to centralized catalog
+    console.warn("Backend catalog service offline, utilizing local catalog data.", err.message);
+    return mockCatalogApi.getCategories();
+  }
 }
 
 /**
- * Fetches a single category and its products by slug from GET /api/categories/:slug.
+ * Fetches a single category and its products by slug.
  */
 export async function getCategoryBySlug(slug) {
   if (isMockApiEnabled()) {
     return mockCatalogApi.getCategoryBySlug(slug);
   }
 
-  const response = await fetch(`${API_BASE}/api/categories/${encodeURIComponent(slug)}`, {
-    method: "GET",
-    headers: defaultHeaders,
-    credentials: "include",
-  });
-
-  return handleResponse(response);
+  try {
+    const response = await fetch(`${API_BASE}/api/categories/${encodeURIComponent(slug)}`, {
+      method: "GET",
+      headers: defaultHeaders,
+      credentials: "include",
+    });
+    return await handleResponse(response);
+  } catch (err) {
+    console.warn("Backend category endpoint offline, utilizing local catalog data.", err.message);
+    return mockCatalogApi.getCategoryBySlug(slug);
+  }
 }
 
 /**
- * Fetches active products with search, category/brand filter, price range, and sorting.
- * Query parameters supported by backend GET /api/products:
- * - q: keyword search string (searches name, description, brand, tag, SKU, partNumber)
- * - category: category slug or UUID
- * - brand: brand name
- * - minPrice: minimum variant price
- * - maxPrice: maximum variant price
- * - sort: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc'
- * - page: page number (default 1)
- * - limit: items per page (default 12)
+ * Fetches active products with search, category/subcategory/brand filters, and sorting.
  */
 export async function getProducts({
   q = "",
   category = "",
+  subcategory = "",
+  subcat = "",
   brand = "",
   minPrice = "",
   maxPrice = "",
+  inStockOnly = false,
   sort = "newest",
   page = 1,
   limit = 12,
@@ -106,9 +107,11 @@ export async function getProducts({
     return mockCatalogApi.getProducts({
       q,
       category,
+      subcategory: subcategory || subcat,
       brand,
       minPrice,
       maxPrice,
+      inStockOnly,
       sort,
       page,
       limit,
@@ -118,35 +121,56 @@ export async function getProducts({
   const query = new URLSearchParams();
   if (q && q.trim()) query.set("q", q.trim());
   if (category && category.trim() && category !== "all") query.set("category", category.trim());
-  if (brand && brand.trim()) query.set("brand", brand.trim());
+  if ((subcategory || subcat) && (subcategory || subcat) !== "all") query.set("subcat", (subcategory || subcat).trim());
+  if (brand && brand.trim() && brand !== "all") query.set("brand", brand.trim());
   if (minPrice !== "" && !isNaN(minPrice)) query.set("minPrice", minPrice);
   if (maxPrice !== "" && !isNaN(maxPrice)) query.set("maxPrice", maxPrice);
+  if (inStockOnly) query.set("inStockOnly", "true");
   if (sort) query.set("sort", sort);
   if (page) query.set("page", page);
   if (limit) query.set("limit", limit);
 
-  const response = await fetch(`${API_BASE}/api/products?${query.toString()}`, {
-    method: "GET",
-    headers: defaultHeaders,
-    credentials: "include",
-  });
-
-  return handleResponse(response);
+  try {
+    const response = await fetch(`${API_BASE}/api/products?${query.toString()}`, {
+      method: "GET",
+      headers: defaultHeaders,
+      credentials: "include",
+    });
+    return await handleResponse(response);
+  } catch (err) {
+    console.warn("Backend product service offline, utilizing local catalog data.", err.message);
+    return mockCatalogApi.getProducts({
+      q,
+      category,
+      subcategory: subcategory || subcat,
+      brand,
+      minPrice,
+      maxPrice,
+      inStockOnly,
+      sort,
+      page,
+      limit,
+    });
+  }
 }
 
 /**
- * Fetches a single product and its active variants by slug from GET /api/products/:slug.
+ * Fetches a single product and its active variants by slug.
  */
 export async function getProductBySlug(slug) {
   if (isMockApiEnabled()) {
     return mockCatalogApi.getProductBySlug(slug);
   }
 
-  const response = await fetch(`${API_BASE}/api/products/${encodeURIComponent(slug)}`, {
-    method: "GET",
-    headers: defaultHeaders,
-    credentials: "include",
-  });
-
-  return handleResponse(response);
+  try {
+    const response = await fetch(`${API_BASE}/api/products/${encodeURIComponent(slug)}`, {
+      method: "GET",
+      headers: defaultHeaders,
+      credentials: "include",
+    });
+    return await handleResponse(response);
+  } catch (err) {
+    console.warn("Backend product detail service offline, utilizing local catalog data.", err.message);
+    return mockCatalogApi.getProductBySlug(slug);
+  }
 }
