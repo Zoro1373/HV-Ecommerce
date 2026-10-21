@@ -6,6 +6,9 @@ const sectionLabels = {
   categories: "Categories",
   inventory: "Inventory Management",
   orders: "Orders & Fulfillment",
+  discounts: "Discounts & Promotions",
+  refunds: "Refunds & Returns",
+  reviews: "Product Reviews",
   customers: "Customer Directory",
   reports: "Reports & Analytics",
   users: "Admin Users & Roles",
@@ -57,13 +60,10 @@ export default function AdminHeader({
             } (Connected)`}
           >
             <span
-              className="adm-status-dot"
-              style={{
-                width: 6,
-                height: 6,
-                backgroundColor:
-                  healthStatus.status === "UP" ? "#10b981" : "#ef4444",
-              }}
+              className={`adm-status-dot ${
+                healthStatus.status === "UP" ? "" : "degraded"
+              }`}
+              style={{ width: 6, height: 6 }}
               aria-hidden="true"
             />
             <span>

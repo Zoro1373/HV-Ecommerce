@@ -5,12 +5,24 @@ import {
   createAdminCategory,
 } from "../../services/adminApi";
 
+// Currency Formatter
+const formatINR = (val) => {
+  const num = Number(val);
+  if (isNaN(num)) return "₹0.00";
+  return `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 export default function AdminCategories() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Category inspection drawer
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("name_asc");
+
+  // Category inspection modal
   const [selectedCategorySlug, setSelectedCategorySlug] = useState(null);
   const [inspectData, setInspectData] = useState(null);
   const [inspectLoading, setInspectLoading] = useState(false);
@@ -47,6 +59,18 @@ export default function AdminCategories() {
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
+
+  // Prevent background page from scrolling while modal is open
+  useEffect(() => {
+    if (isAddModalOpen || selectedCategorySlug) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isAddModalOpen, selectedCategorySlug]);
 
   const handleInspectCategory = async (slug) => {
     try {
@@ -108,8 +132,59 @@ export default function AdminCategories() {
     }
   };
 
+  // Resilient multi-criteria filtering & sorting
+  const filteredCategories = categories
+    .filter((c) => {
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const nameMatch = (c.name || "").toLowerCase().includes(q);
+        const slugMatch = (c.slug || "").toLowerCase().includes(q);
+        const descMatch = (c.description || "").toLowerCase().includes(q);
+        if (!nameMatch && !slugMatch && !descMatch) return false;
+      }
+
+      // 2. Product count association filter
+      const count = Number(c.productsCount || c._count?.products || 0);
+      if (statusFilter === "with_products" && count === 0) return false;
+      if (statusFilter === "empty" && count > 0) return false;
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "name_asc") return (a.name || "").localeCompare(b.name || "");
+      if (sortOrder === "name_desc") return (b.name || "").localeCompare(a.name || "");
+      const countA = Number(a.productsCount || a._count?.products || 0);
+      const countB = Number(b.productsCount || b._count?.products || 0);
+      if (sortOrder === "products_desc") return countB - countA;
+      if (sortOrder === "products_asc") return countA - countB;
+      return 0;
+    });
+
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() ||
+    statusFilter !== "all" ||
+    sortOrder !== "name_asc"
+  );
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setSortOrder("name_asc");
+  };
+
+  // Summary KPI Calculations
+  const totalCategoriesCount = categories.length;
+  const activeClassificationsCount = categories.filter((c) => c.isActive !== false).length;
+  const totalAssociatedProducts = categories.reduce(
+    (acc, c) => acc + (Number(c.productsCount || c._count?.products) || 0),
+    0
+  );
+  const topLevelTaxonomiesCount = categories.filter((c) => !c.parentId).length || categories.length;
+
   return (
     <div className="adm-categories-view">
+      {/* Page Header */}
       <div className="adm-page-header">
         <div className="adm-page-title-group">
           <h1>Category Hierarchy Management</h1>
@@ -120,8 +195,19 @@ export default function AdminCategories() {
         <div className="adm-page-actions">
           <button
             type="button"
+            className="adm-btn adm-btn-secondary"
+            onClick={() => loadCategories()}
+            disabled={loading}
+            title="Refresh categories from database"
+            data-testid="refresh-categories-btn"
+          >
+            ↻ Refresh Categories
+          </button>
+          <button
+            type="button"
             className="adm-btn adm-btn-primary"
             onClick={() => setIsAddModalOpen(true)}
+            data-testid="add-category-btn"
           >
             + Add Category
           </button>
@@ -137,48 +223,289 @@ export default function AdminCategories() {
         </div>
       )}
 
+      {/* Category Summary KPI Grid */}
+      {categories.length > 0 && (
+        <div className="adm-customer-kpi-grid">
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Total Categories</span>
+              <span className="adm-customer-kpi-val">{totalCategoriesCount}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-blue" aria-hidden="true">
+              🗂️
+            </div>
+          </div>
+
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Active Classifications</span>
+              <span className="adm-customer-kpi-val">{activeClassificationsCount}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-green" aria-hidden="true">
+              ✓
+            </div>
+          </div>
+
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Associated Products</span>
+              <span className="adm-customer-kpi-val">{totalAssociatedProducts}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-purple" aria-hidden="true">
+              📦
+            </div>
+          </div>
+
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Top-Level Taxonomies</span>
+              <span className="adm-customer-kpi-val">{topLevelTaxonomiesCount}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-amber" aria-hidden="true">
+              🏷️
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      <div className="adm-filter-bar">
+        <div className="adm-search-input-wrap">
+          <span className="adm-search-icon" aria-hidden="true">
+            🔍
+          </span>
+          <input
+            type="text"
+            className="adm-search-input"
+            placeholder="Search by category name, slug, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search categories"
+          />
+        </div>
+
+        <div className="adm-filter-group">
+          <select
+            className="adm-select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter by product association"
+          >
+            <option value="all">All Categories ({categories.length})</option>
+            <option value="with_products">With Assigned Products</option>
+            <option value="empty">Empty Categories (0 Products)</option>
+          </select>
+
+          <select
+            className="adm-select"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            aria-label="Sort categories"
+          >
+            <option value="name_asc">Name (A–Z)</option>
+            <option value="name_desc">Name (Z–A)</option>
+            <option value="products_desc">Products Count: High to Low</option>
+            <option value="products_asc">Products Count: Low to High</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="adm-btn adm-btn-secondary adm-btn-sm"
+              onClick={handleClearFilters}
+              title="Reset all filters"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content Area */}
       {loading ? (
         <div className="adm-loading-screen" role="status">
           <span className="adm-spinner adm-spinner-dark" aria-hidden="true" />
           <p>Loading categories from PostgreSQL...</p>
         </div>
+      ) : filteredCategories.length === 0 ? (
+        <div className="adm-empty-state">
+          <div className="adm-empty-icon" aria-hidden="true">
+            🗂️
+          </div>
+          <h3 className="adm-empty-title">
+            {hasActiveFilters ? "No Matching Categories Found" : "No Categories Found"}
+          </h3>
+          <p className="adm-empty-desc">
+            {hasActiveFilters
+              ? "No product categories matched your search term or filter parameters. Reset your filters to view all catalog categories."
+              : "No product categories are currently registered in the database catalog."}
+          </p>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className="adm-btn adm-btn-secondary"
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="adm-btn adm-btn-primary"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              + Add First Category
+            </button>
+          )}
+        </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 20 }}>
-          {categories.map((cat) => (
-            <div key={cat.id} className="adm-card" style={{ marginBottom: 0 }}>
-              <div className="adm-card-header">
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: "1.4rem" }}>{cat.icon || "📁"}</span>
-                  <div>
-                    <h3 className="adm-card-title">{cat.name}</h3>
-                    <code style={{ fontSize: "0.74rem", color: "var(--adm-text-muted)" }}>
-                      /{cat.slug}
-                    </code>
-                  </div>
-                </div>
-                <span className="adm-badge adm-badge-success">Active</span>
-              </div>
-              <div className="adm-card-body">
-                <p style={{ margin: "0 0 16px", fontSize: "0.86rem", color: "var(--adm-text-secondary)", minHeight: 40 }}>
-                  {cat.description || "No description provided."}
-                </p>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.82rem" }}>
-                  <span style={{ fontWeight: 600, color: "var(--adm-text-primary)" }}>
-                    📦 {cat.productsCount || 0} Products
-                  </span>
-                  <button
-                    type="button"
-                    className="adm-btn adm-btn-secondary adm-btn-sm"
-                    onClick={() => handleInspectCategory(cat.slug)}
-                  >
-                    Inspect Products →
-                  </button>
-                </div>
+        <>
+          {/* Desktop Table View (Optimized for viewports > 768px) */}
+          <div className="adm-category-desktop-table">
+            <div className="adm-card" style={{ padding: 0, overflow: "hidden" }}>
+              <div className="adm-table-container">
+                <table className="adm-table" aria-label="Product categories directory">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>URL Slug</th>
+                      <th>Description</th>
+                      <th>Assigned Products</th>
+                      <th>Taxonomy Level</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCategories.map((cat) => {
+                      const prodCount = Number(cat.productsCount || cat._count?.products || 0);
+                      return (
+                        <tr key={cat.id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div
+                                className={`adm-category-avatar ${cat.tint || "tint-blue"}`}
+                                style={{ width: 34, height: 34, fontSize: "1.1rem", borderRadius: 8 }}
+                              >
+                                {cat.icon || "📁"}
+                              </div>
+                              <div>
+                                <strong style={{ color: "var(--adm-text-primary)", fontSize: "0.88rem" }}>
+                                  {cat.name}
+                                </strong>
+                                {cat.id && (
+                                  <div
+                                    style={{
+                                      fontSize: "0.7rem",
+                                      color: "var(--adm-text-muted)",
+                                      fontFamily: "monospace",
+                                    }}
+                                  >
+                                    ID: {String(cat.id).slice(0, 8)}...
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <code style={{ fontSize: "0.78rem" }}>/{cat.slug}</code>
+                          </td>
+                          <td style={{ maxWidth: 280 }}>
+                            <span
+                              style={{
+                                fontSize: "0.82rem",
+                                color: "var(--adm-text-secondary)",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                              title={cat.description || "No description"}
+                            >
+                              {cat.description || "No extended category description provided."}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="adm-badge adm-badge-info" style={{ fontWeight: 600 }}>
+                              📦 {prodCount} Product{prodCount !== 1 ? "s" : ""}
+                            </span>
+                          </td>
+                          <td>
+                            <span
+                              className="adm-badge adm-badge-neutral"
+                              style={{ fontSize: "0.72rem" }}
+                            >
+                              {cat.parentId ? "Sub-Category" : "Top-Level"}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="adm-badge adm-badge-success">Active</span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="adm-btn adm-btn-secondary adm-btn-sm"
+                              onClick={() => handleInspectCategory(cat.slug)}
+                              data-testid={`inspect-category-${cat.slug}`}
+                              title={`Inspect products for ${cat.name}`}
+                            >
+                              Inspect Products &rarr;
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+
+          {/* Mobile Cards View (Optimized for viewports <= 768px) */}
+          <div className="adm-category-mobile-cards">
+            {filteredCategories.map((cat) => {
+              const prodCount = Number(cat.productsCount || cat._count?.products || 0);
+              return (
+                <div key={cat.id} className="adm-category-card">
+                  <div className="adm-category-card-header">
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div className={`adm-category-avatar ${cat.tint || "tint-blue"}`}>
+                        {cat.icon || "📁"}
+                      </div>
+                      <div className="adm-category-title-wrap">
+                        <h3 className="adm-category-name">{cat.name}</h3>
+                        <code style={{ fontSize: "0.74rem", color: "var(--adm-text-muted)" }}>
+                          /{cat.slug}
+                        </code>
+                      </div>
+                    </div>
+                    <span className="adm-badge adm-badge-success">Active</span>
+                  </div>
+
+                  <div className="adm-category-card-body">
+                    <p className="adm-category-desc">
+                      {cat.description || "No extended category description provided."}
+                    </p>
+
+                    <div className="adm-category-meta-bar">
+                      <span style={{ fontWeight: 600, color: "var(--adm-text-primary)" }}>
+                        📦 {prodCount} Product{prodCount !== 1 ? "s" : ""}
+                      </span>
+                      <button
+                        type="button"
+                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                        onClick={() => handleInspectCategory(cat.slug)}
+                        title={`Inspect products for ${cat.name}`}
+                      >
+                        Inspect Products &rarr;
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Inspect Category Products Modal */}
@@ -186,7 +513,7 @@ export default function AdminCategories() {
         <div className="adm-modal-backdrop" onClick={() => setSelectedCategorySlug(null)}>
           <div
             className="adm-modal"
-            style={{ maxWidth: 740 }}
+            style={{ maxWidth: 760 }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-labelledby="inspect-cat-title"
@@ -216,40 +543,85 @@ export default function AdminCategories() {
                 </div>
               ) : (
                 <>
-                  <p style={{ marginTop: 0, color: "var(--adm-text-secondary)", fontSize: "0.88rem" }}>
-                    {inspectData?.category?.description}
-                  </p>
+                  {/* Category Hero Banner */}
+                  <div className="adm-category-modal-hero">
+                    <div className="adm-category-modal-avatar">
+                      {inspectData?.category?.icon || "📁"}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "var(--adm-text-primary)" }}>
+                        {inspectData?.category?.name || selectedCategorySlug}
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--adm-text-muted)", marginBottom: 8 }}>
+                        <code>/{inspectData?.category?.slug || selectedCategorySlug}</code>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <span className="adm-badge adm-badge-success">Active</span>
+                        <span className="adm-badge adm-badge-info">
+                          📦 {inspectData?.products?.length || 0} Products
+                        </span>
+                        {inspectData?.category?.id && (
+                          <span className="adm-badge adm-badge-neutral" style={{ fontFamily: "monospace" }}>
+                            ID: {inspectData.category.id.slice(0, 8)}...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {inspectData?.category?.description && (
+                    <div style={{ marginBottom: 16 }}>
+                      <span className="adm-label">Taxonomy Description</span>
+                      <p style={{ margin: 0, color: "var(--adm-text-secondary)", fontSize: "0.88rem", lineHeight: 1.5 }}>
+                        {inspectData.category.description}
+                      </p>
+                    </div>
+                  )}
+
                   <span className="adm-label">
                     Active Catalog Products ({inspectData?.products?.length || 0})
                   </span>
-                  <div className="adm-table-container" style={{ marginTop: 8 }}>
-                    <table className="adm-table">
-                      <thead>
-                        <tr>
-                          <th>Product Name</th>
-                          <th>Slug</th>
-                          <th>Brand</th>
-                          <th>Variants</th>
-                          <th>Price</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(inspectData?.products || []).map((p) => (
-                          <tr key={p.id}>
-                            <td>
-                              <strong>{p.name}</strong>
-                            </td>
-                            <td>
-                              <code>{p.slug}</code>
-                            </td>
-                            <td>{p.brand || "VERTEX"}</td>
-                            <td>{p.variants?.length || 1} SKU(s)</td>
-                            <td>₹{Number(p.price || 0).toLocaleString("en-IN")}</td>
+
+                  {(inspectData?.products || []).length === 0 ? (
+                    <div className="adm-empty-state" style={{ padding: "24px 16px" }}>
+                      <p className="adm-empty-desc" style={{ margin: 0 }}>
+                        No products are currently assigned to this category classification.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="adm-table-container" style={{ marginTop: 8 }}>
+                      <table className="adm-table">
+                        <thead>
+                          <tr>
+                            <th>Product Name</th>
+                            <th>Slug</th>
+                            <th>Brand</th>
+                            <th>Variants</th>
+                            <th>Price</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {(inspectData?.products || []).map((p) => (
+                            <tr key={p.id}>
+                              <td>
+                                <strong>{p.name}</strong>
+                              </td>
+                              <td>
+                                <code>{p.slug}</code>
+                              </td>
+                              <td>{p.brand || "VERTEX"}</td>
+                              <td>{p.variants?.length || 1} SKU(s)</td>
+                              <td>
+                                <strong style={{ color: "var(--adm-primary)" }}>
+                                  {formatINR(p.price || 0)}
+                                </strong>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -289,7 +661,7 @@ export default function AdminCategories() {
                 ×
               </button>
             </div>
-            <form onSubmit={handleCreateCategory}>
+            <form onSubmit={handleCreateCategory} className="adm-modal-form">
               <div className="adm-modal-body">
                 {modalMessage && (
                   <div

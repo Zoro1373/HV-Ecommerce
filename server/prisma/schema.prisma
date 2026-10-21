@@ -52,6 +52,8 @@ model User {
   emailVerified  Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  // Temporarily disabled until customer analytics migration is deployed
+  // lastLoginAt    DateTime?
 
   // Multi-Factor Authentication (MFA)
   mfaEnabled          Boolean        @default(false)
@@ -62,12 +64,14 @@ model User {
   recoveryCodes       RecoveryCode[]
   mfaChallenges       MfaChallenge[]
 
-  sessions       Session[]
-  cart           Cart?
-  addresses      Address[]
-  orders         Order[]
-  quotes         QuoteRequest[]
-  auditLogs      AuditLog[]
+  sessions        Session[]
+  cart            Cart?
+  addresses       Address[]
+  orders          Order[]
+  quotes          QuoteRequest[]
+  auditLogs       AuditLog[]
+  // Temporarily disabled until customer analytics migration is deployed
+  // analyticsEvents AnalyticsEvent[]
 
   @@index([email])
 }
@@ -347,5 +351,68 @@ model MfaChallenge {
 
   @@index([userId])
   @@index([tokenHash])
+}
+
+model AnalyticsEvent {
+  id            String    @id @default(uuid())
+  schemaVersion String    @default("v1") @db.VarChar(10)
+  eventType     String    @db.VarChar(50)
+  timestamp     DateTime  @default(now())
+
+  visitorId     String    @db.VarChar(64)
+  sessionId     String    @db.VarChar(64)
+  userId        String?
+  // Temporarily disabled until customer analytics migration is deployed
+  // user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  entityType    String?   @db.VarChar(50)
+  entityId      String?   @db.VarChar(100)
+  metadata      Json?
+
+  createdAt     DateTime  @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([sessionId])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model AnalyticsDailyRollup {
+  id               String   @id @default(uuid())
+  date             DateTime @unique @db.Date
+  totalSessions    Int      @default(0)
+  uniqueVisitors   Int      @default(0)
+  pageViews        Int      @default(0)
+  productViews     Int      @default(0)
+  cartAdditions    Int      @default(0)
+  checkoutsStarted Int      @default(0)
+  ordersPlaced     Int      @default(0)
+  grossRevenue     Decimal  @default(0.00) @db.Decimal(12, 2)
+  newRegistrations Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([date])
+}
+
+model AnalyticsOutbox {
+  id             String    @id @default(uuid())
+  eventType      String    @db.VarChar(50)
+  idempotencyKey String    @unique @db.VarChar(128)
+  payload        Json
+  status         String    @default("PENDING") @db.VarChar(20)
+  retryCount     Int       @default(0)
+  maxRetries     Int       @default(5)
+  nextRetryAt    DateTime?
+  lockedAt       DateTime?
+  lockedBy       String?   @db.VarChar(64)
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
+
+  @@index([status, nextRetryAt])
+  @@index([createdAt])
 }
 

@@ -116,7 +116,7 @@ export default function AdminLayout({
         style={{
           alignItems: "center",
           justifyContent: "center",
-          background: "#0B1120",
+          background: "var(--adm-sidebar-bg)",
           color: "#ffffff",
         }}
         role="status"
@@ -199,7 +199,7 @@ export default function AdminLayout({
             <AdminUsers currentAdminUser={adminUser} />
           )}
           {activeSection === "settings" && (
-            <AdminSettings healthStatus={healthStatus} />
+            <AdminSettings healthStatus={healthStatus} currentAdminUser={adminUser} />
           )}
           {activeSection === "audit-logs" && <AdminAuditLogs />}
         </main>

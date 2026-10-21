@@ -62,7 +62,7 @@ export default function AdminAuditLogs() {
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
-              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
+              <div style={{ background: "var(--adm-bg)", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
                 <span className="adm-badge adm-badge-success" style={{ marginBottom: 6 }}>AUTH_LOGIN</span>
                 <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>Session Creation</div>
                 <div style={{ fontSize: "0.78rem", color: "var(--adm-text-secondary)", marginTop: 4 }}>
@@ -70,7 +70,7 @@ export default function AdminAuditLogs() {
                 </div>
               </div>
 
-              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
+              <div style={{ background: "var(--adm-bg)", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
                 <span className="adm-badge adm-badge-warning" style={{ marginBottom: 6 }}>MFA_ENROLL</span>
                 <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>2FA Status Changes</div>
                 <div style={{ fontSize: "0.78rem", color: "var(--adm-text-secondary)", marginTop: 4 }}>
@@ -78,7 +78,7 @@ export default function AdminAuditLogs() {
                 </div>
               </div>
 
-              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
+              <div style={{ background: "var(--adm-bg)", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
                 <span className="adm-badge adm-badge-info" style={{ marginBottom: 6 }}>STOCK_ADJUSTMENT</span>
                 <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>Inventory Telemetry</div>
                 <div style={{ fontSize: "0.78rem", color: "var(--adm-text-secondary)", marginTop: 4 }}>
@@ -86,7 +86,7 @@ export default function AdminAuditLogs() {
                 </div>
               </div>
 
-              <div style={{ background: "#f8fafc", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
+              <div style={{ background: "var(--adm-bg)", padding: 14, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
                 <span className="adm-badge adm-badge-neutral" style={{ marginBottom: 6 }}>PASSWORD_CHANGE</span>
                 <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>Credential Rotation</div>
                 <div style={{ fontSize: "0.78rem", color: "var(--adm-text-secondary)", marginTop: 4 }}>
@@ -95,7 +95,7 @@ export default function AdminAuditLogs() {
               </div>
             </div>
 
-            <div className="adm-empty-state" style={{ marginTop: 20, background: "#ffffff" }}>
+            <div className="adm-empty-state" style={{ marginTop: 20, background: "var(--adm-surface)" }}>
               <div className="adm-empty-icon" aria-hidden="true">📜</div>
               <h3 className="adm-empty-title">Audit Trail Ready</h3>
               <p className="adm-empty-desc">
@@ -107,7 +107,7 @@ export default function AdminAuditLogs() {
       ) : (
         <div className="adm-card" style={{ padding: 0 }}>
           <div className="adm-table-container">
-            <table className="adm-table">
+            <table className="adm-table" aria-label="Audit log entries table">
               <thead>
                 <tr>
                   <th>Timestamp</th>

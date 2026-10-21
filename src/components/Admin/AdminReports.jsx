@@ -108,7 +108,7 @@ export default function AdminReports() {
                   <div
                     key={c.id}
                     style={{
-                      background: "#f8fafc",
+                      background: "var(--adm-bg)",
                       border: "1px solid var(--adm-border)",
                       borderRadius: 8,
                       padding: 16,
@@ -145,7 +145,7 @@ export default function AdminReports() {
               <p style={{ margin: "0 0 14px", color: "var(--adm-text-secondary)", fontSize: "0.9rem" }}>
                 In accordance with VERTEX financial integrity guidelines, revenue and sales reports are computed exclusively from verified, server-authenticated orders with confirmed payment states.
               </p>
-              <div style={{ background: "#f8fafc", padding: 16, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
+              <div style={{ background: "var(--adm-bg)", padding: 16, borderRadius: 8, border: "1px solid var(--adm-border)" }}>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>Scheduled Aggregation Endpoints:</div>
                 <ul style={{ margin: 0, paddingLeft: 20, fontSize: "0.85rem", color: "var(--adm-text-secondary)" }}>
                   <li><code>GET /api/admin/reports/sales</code> — Aggregated daily, weekly, and monthly revenue.</li>

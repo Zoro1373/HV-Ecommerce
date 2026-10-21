@@ -136,12 +136,21 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
         </div>
       )}
 
-      {/* Primary KPI Metrics Grid */}
+      {/* Primary KPI Metrics Grid - 4 Column Balanced Layout */}
       <div className="adm-metrics-grid">
         <div
           className="adm-metric-card"
           onClick={() => onNavigateSection("products")}
           style={{ cursor: "pointer" }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onNavigateSection("products");
+            }
+          }}
+          title="Jump to Product Catalog"
         >
           <div className="adm-metric-info">
             <span className="adm-metric-label">Active Products</span>
@@ -159,6 +168,15 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
           className="adm-metric-card"
           onClick={() => onNavigateSection("orders")}
           style={{ cursor: "pointer" }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onNavigateSection("orders");
+            }
+          }}
+          title="Jump to Orders & Fulfillment"
         >
           <div className="adm-metric-info">
             <span className="adm-metric-label">Orders &amp; Revenue</span>
@@ -173,13 +191,67 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             🚚
           </div>
         </div>
+
+        <div
+          className="adm-metric-card"
+          onClick={() => onNavigateSection("inventory")}
+          style={{ cursor: "pointer" }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onNavigateSection("inventory");
+            }
+          }}
+          title="Jump to Low Stock Inventory"
+        >
+          <div className="adm-metric-info">
+            <span className="adm-metric-label">Low Stock Alerts</span>
+            <span className="adm-metric-value">{lowStockItems.length}</span>
+            <span className="adm-metric-sub">
+              {lowStockItems.length > 0 ? "Variants at or below 50 units" : "All variants well-stocked"}
+            </span>
+          </div>
+          <div className="adm-metric-icon icon-warning" aria-hidden="true">
+            ⚠️
+          </div>
+        </div>
+
+        <div
+          className="adm-metric-card"
+          onClick={() => onNavigateSection("settings")}
+          style={{ cursor: "pointer" }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onNavigateSection("settings");
+            }
+          }}
+          title="Jump to System Settings"
+        >
+          <div className="adm-metric-info">
+            <span className="adm-metric-label">System Health</span>
+            <span className="adm-metric-value" style={{ fontSize: "1.2rem", marginTop: 4 }}>
+              {health?.status === "UP" ? "Operational" : "Degraded"}
+            </span>
+            <span className="adm-metric-sub">
+              PostgreSQL 18.6 (Neon) • Active
+            </span>
+          </div>
+          <div className="adm-metric-icon icon-green" aria-hidden="true">
+            ⚡
+          </div>
+        </div>
       </div>
 
       {/* Operational Order Monitoring Dashboard Panel */}
       <div className="adm-card" style={{ marginBottom: 24 }}>
         <div className="adm-card-header">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: "1.2rem" }}>📡</span>
+            <span style={{ fontSize: "1.2rem" }} aria-hidden="true">📡</span>
             <h2 className="adm-card-title" style={{ margin: 0 }}>
               Operational Order Monitoring Dashboard
             </h2>
@@ -195,6 +267,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box"
               onClick={() => onNavigateSection("orders")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("orders");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View all orders"
@@ -207,6 +285,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box"
               onClick={() => onNavigateSection("orders")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("orders");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View orders received today"
@@ -219,6 +303,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box kpi-pending"
               onClick={() => onNavigateSection("orders")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("orders");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View pending orders"
@@ -231,6 +321,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box kpi-processing"
               onClick={() => onNavigateSection("orders")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("orders");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View processing orders"
@@ -243,6 +339,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box kpi-shipped"
               onClick={() => onNavigateSection("orders")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("orders");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View shipped orders"
@@ -255,6 +357,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box kpi-delivered"
               onClick={() => onNavigateSection("orders")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("orders");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View delivered orders"
@@ -267,6 +375,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box kpi-cancelled"
               onClick={() => onNavigateSection("orders")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("orders");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View cancelled orders"
@@ -279,6 +393,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
             <div
               className="adm-order-kpi-box kpi-refund"
               onClick={() => onNavigateSection("refunds")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigateSection("refunds");
+                }
+              }}
               role="button"
               tabIndex={0}
               title="View refund requests"
@@ -292,47 +412,52 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
       </div>
 
       {/* System Status & Diagnostics Card */}
-      <div className="adm-card">
+      <div className="adm-card" style={{ marginBottom: 24 }}>
         <div className="adm-card-header">
           <h2 className="adm-card-title">System Health &amp; Infrastructure</h2>
-          <span className="adm-badge adm-badge-success">Operational</span>
+          <span className={`adm-badge ${health?.status === "UP" ? "adm-badge-success" : "adm-badge-warning"}`}>
+            {health?.status === "UP" ? "Operational" : "Degraded"}
+          </span>
         </div>
         <div className="adm-card-body">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-            <div>
+          <div className="adm-health-diag-grid">
+            <div className="adm-health-diag-item">
               <span className="adm-label">Database Provider</span>
-              <div style={{ fontWeight: 600, color: "var(--adm-text-primary)" }}>
+              <div className="adm-health-diag-val">
                 PostgreSQL 18.6 (Neon Cloud)
               </div>
-              <div className="adm-form-hint">Role: vertex_app (Least Privilege)</div>
+              <div className="adm-health-diag-hint">Role: vertex_app (Least Privilege)</div>
             </div>
-            <div>
+            <div className="adm-health-diag-item">
               <span className="adm-label">API Health Status</span>
-              <div style={{ fontWeight: 600, color: health?.status === "UP" ? "#10b981" : "#ef4444" }}>
+              <div
+                className="adm-health-diag-val"
+                style={{ color: health?.status === "UP" ? "var(--adm-success)" : "var(--adm-danger)" }}
+              >
                 ● {health?.status === "UP" ? "UP (Connected)" : "Degraded"}
               </div>
-              <div className="adm-form-hint">Prisma ORM Connection Active</div>
+              <div className="adm-health-diag-hint">Prisma ORM Connection Active</div>
             </div>
-            <div>
+            <div className="adm-health-diag-item">
               <span className="adm-label">Authentication &amp; Session</span>
-              <div style={{ fontWeight: 600, color: "var(--adm-text-primary)" }}>
+              <div className="adm-health-diag-val">
                 HttpOnly Cookies (7-day valid)
               </div>
-              <div className="adm-form-hint">CSRF: Strict Custom Header Mode</div>
+              <div className="adm-health-diag-hint">CSRF: Strict Custom Header Mode</div>
             </div>
-            <div>
+            <div className="adm-health-diag-item">
               <span className="adm-label">Admin Protection</span>
-              <div style={{ fontWeight: 600, color: "var(--adm-primary)" }}>
+              <div className="adm-health-diag-val" style={{ color: "var(--adm-primary)" }}>
                 MFA TOTP Supported
               </div>
-              <div className="adm-form-hint">Role-based Access Control Enforced</div>
+              <div className="adm-health-diag-hint">Role-based Access Control Enforced</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Two Column Grid: Low Stock Alert Items & Operational Activity Feed */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 24, marginBottom: 24 }}>
+      <div className="adm-dashboard-grid-2col">
         {/* Low Stock Items Table */}
         <div className="adm-card" style={{ marginBottom: 0 }}>
           <div className="adm-card-header">
@@ -347,8 +472,12 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
           </div>
           <div className="adm-card-body" style={{ padding: 0 }}>
             {lowStockItems.length === 0 ? (
-              <div style={{ padding: 24, textAlign: "center", color: "var(--adm-text-muted)" }}>
-                ✓ All catalog variants are well-stocked above thresholds.
+              <div style={{ padding: 28, textAlign: "center", color: "var(--adm-text-secondary)" }}>
+                <div style={{ fontSize: "1.8rem", marginBottom: 8 }} aria-hidden="true">✓</div>
+                <strong style={{ display: "block", color: "var(--adm-text-primary)", marginBottom: 4 }}>
+                  Inventory Healthy
+                </strong>
+                All catalog variants are currently well-stocked above threshold.
               </div>
             ) : (
               <div className="adm-table-container" style={{ border: "none" }}>
@@ -371,7 +500,7 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
                           </div>
                         </td>
                         <td>
-                          <code style={{ fontSize: "0.78rem" }}>{item.sku}</code>
+                          <code>{item.sku}</code>
                         </td>
                         <td>
                           <strong>{item.stockQuantity}</strong> units
@@ -399,7 +528,10 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
           <div className="adm-card-body">
             <div className="adm-activity-feed">
               <div className="adm-activity-item">
-                <span className={`adm-activity-dot ${health?.status === "UP" ? "dot-green" : "dot-orange"}`} aria-hidden="true" />
+                <span
+                  className={`adm-activity-dot ${health?.status === "UP" ? "dot-green" : "dot-orange"}`}
+                  aria-hidden="true"
+                />
                 <div className="adm-activity-content">
                   <div className="adm-activity-header">
                     <strong>PostgreSQL Connection {health?.status === "UP" ? "Verified" : "Check Needed"}</strong>
@@ -427,7 +559,10 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
               </div>
 
               <div className="adm-activity-item">
-                <span className={`adm-activity-dot ${lowStockItems.length > 0 ? "dot-orange" : "dot-green"}`} aria-hidden="true" />
+                <span
+                  className={`adm-activity-dot ${lowStockItems.length > 0 ? "dot-orange" : "dot-green"}`}
+                  aria-hidden="true"
+                />
                 <div className="adm-activity-content">
                   <div className="adm-activity-header">
                     <strong>Catalog Stock Telemetry</strong>
@@ -458,30 +593,25 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
           </button>
         </div>
         <div className="adm-card-body">
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="adm-cat-dist-list">
             {categories.map((cat) => {
               const count = cat.productsCount || 0;
               const pct = totalProductsCount > 0 ? Math.round((count / totalProductsCount) * 100) : 0;
               return (
-                <div key={cat.id}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: "0.86rem" }}>
-                    <span>
-                      <span style={{ marginRight: 6 }}>{cat.icon || "📦"}</span>
-                      <strong>{cat.name}</strong>
+                <div key={cat.id} className="adm-cat-dist-item">
+                  <div className="adm-cat-dist-header">
+                    <span className="adm-cat-dist-name">
+                      <span aria-hidden="true">{cat.icon || "📦"}</span>
+                      <span>{cat.name}</span>
                     </span>
-                    <span style={{ color: "var(--adm-text-secondary)", fontWeight: 600 }}>
+                    <span className="adm-cat-dist-stats">
                       {count} products ({pct}%)
                     </span>
                   </div>
-                  <div style={{ width: "100%", height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden" }}>
+                  <div className="adm-cat-progress-track">
                     <div
-                      style={{
-                        width: `${pct}%`,
-                        height: "100%",
-                        background: "var(--adm-primary)",
-                        borderRadius: 4,
-                        transition: "width 0.3s ease",
-                      }}
+                      className="adm-cat-progress-fill"
+                      style={{ width: `${pct}%` }}
                     />
                   </div>
                 </div>

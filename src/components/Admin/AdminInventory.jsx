@@ -1,17 +1,39 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getAdminProducts, updateVariantStock } from "../../services/adminApi";
 
+// Currency Formatter
+const formatINR = (val) => {
+  const num = Number(val);
+  if (isNaN(num)) return "₹0.00";
+  return `₹${num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+// Stock Health Badge Helper
+const getStockBadge = (stockQuantity) => {
+  const qty = Number(stockQuantity) || 0;
+  if (qty > 50) {
+    return { label: `In Stock (${qty})`, className: "adm-badge-success" };
+  }
+  if (qty > 0) {
+    return { label: `Low Stock (${qty})`, className: "adm-badge-warning" };
+  }
+  return { label: "Out of Stock (0)", className: "adm-badge-danger" };
+};
+
 export default function AdminInventory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [variants, setVariants] = useState([]);
+
+  // Search, Filter, and Sort States
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("sku_asc");
 
   // Stock Adjustment Dialog
   const [adjustingItem, setAdjustingItem] = useState(null);
   const [adjustQuantity, setAdjustQuantity] = useState("");
-  const [adjustReason, setAdjustReason] = useState("Cycle count audit adjustment");
+  const [adjustReason, setAdjustReason] = useState("Routine warehouse inventory audit");
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const [adjustMessage, setAdjustMessage] = useState(null);
 
@@ -42,20 +64,63 @@ export default function AdminInventory() {
     loadInventory();
   }, [loadInventory]);
 
-  // Filtered variants
-  const filteredVariants = variants.filter((v) => {
-    const matchesSearch =
-      v.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (v.partNumber && v.partNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Prevent background page from scrolling while modal is open
+  useEffect(() => {
+    if (adjustingItem) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [adjustingItem]);
 
-    if (!matchesSearch) return false;
+  // Resilient multi-criteria filtering and sorting
+  const filteredVariants = variants
+    .filter((v) => {
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const skuMatch = (v.sku || "").toLowerCase().includes(q);
+        const nameMatch = (v.productName || "").toLowerCase().includes(q);
+        const partMatch = (v.partNumber || "").toLowerCase().includes(q);
+        const catMatch = (v.categoryName || "").toLowerCase().includes(q);
+        if (!skuMatch && !nameMatch && !partMatch && !catMatch) return false;
+      }
 
-    if (statusFilter === "in_stock") return v.stockQuantity > 50;
-    if (statusFilter === "low_stock") return v.stockQuantity > 0 && v.stockQuantity <= 50;
-    if (statusFilter === "out_of_stock") return v.stockQuantity === 0;
-    return true;
-  });
+      // 2. Status Filter
+      const qty = Number(v.stockQuantity) || 0;
+      if (statusFilter === "in_stock" && qty <= 50) return false;
+      if (statusFilter === "low_stock" && (qty === 0 || qty > 50)) return false;
+      if (statusFilter === "out_of_stock" && qty !== 0) return false;
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "sku_asc") return (a.sku || "").localeCompare(b.sku || "");
+      const stockA = Number(a.stockQuantity) || 0;
+      const stockB = Number(b.stockQuantity) || 0;
+      if (sortOrder === "stock_asc") return stockA - stockB;
+      if (sortOrder === "stock_desc") return stockB - stockA;
+      const priceA = Number(a.price) || 0;
+      const priceB = Number(b.price) || 0;
+      if (sortOrder === "price_desc") return priceB - priceA;
+      if (sortOrder === "price_asc") return priceA - priceB;
+      return 0;
+    });
+
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() ||
+    statusFilter !== "all" ||
+    sortOrder !== "sku_asc"
+  );
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setSortOrder("sku_asc");
+  };
 
   const handleOpenAdjust = (variant) => {
     setAdjustingItem(variant);
@@ -117,8 +182,15 @@ export default function AdminInventory() {
     }
   };
 
+  // KPI Calculations
+  const totalTrackedSkus = variants.length;
+  const totalStockUnits = variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0);
+  const lowStockCount = variants.filter((v) => Number(v.stockQuantity) > 0 && Number(v.stockQuantity) <= 50).length;
+  const outOfStockCount = variants.filter((v) => Number(v.stockQuantity) === 0).length;
+
   return (
     <div className="adm-inventory-view">
+      {/* Page Header */}
       <div className="adm-page-header">
         <div className="adm-page-title-group">
           <h1>Inventory Telemetry &amp; Stock Control</h1>
@@ -131,6 +203,8 @@ export default function AdminInventory() {
             type="button"
             className="adm-btn adm-btn-secondary"
             onClick={loadInventory}
+            disabled={loading}
+            title="Refresh inventory from database"
           >
             ↻ Refresh Inventory
           </button>
@@ -146,6 +220,51 @@ export default function AdminInventory() {
         </div>
       )}
 
+      {/* Summary KPI Grid */}
+      {variants.length > 0 && (
+        <div className="adm-customer-kpi-grid">
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Total SKUs</span>
+              <span className="adm-customer-kpi-val">{totalTrackedSkus}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-blue" aria-hidden="true">
+              🏷️
+            </div>
+          </div>
+
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Total Stock Units</span>
+              <span className="adm-customer-kpi-val">{totalStockUnits.toLocaleString("en-IN")}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-purple" aria-hidden="true">
+              📦
+            </div>
+          </div>
+
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Low Stock Alerts</span>
+              <span className="adm-customer-kpi-val">{lowStockCount}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-amber" aria-hidden="true">
+              ⚠️
+            </div>
+          </div>
+
+          <div className="adm-customer-kpi-card">
+            <div className="adm-customer-kpi-info">
+              <span className="adm-customer-kpi-label">Out of Stock</span>
+              <span className="adm-customer-kpi-val">{outOfStockCount}</span>
+            </div>
+            <div className="adm-customer-kpi-icon icon-red" aria-hidden="true">
+              ⛔
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filter and Search Bar */}
       <div className="adm-filter-bar">
         <div className="adm-search-input-wrap">
@@ -155,7 +274,7 @@ export default function AdminInventory() {
           <input
             type="text"
             className="adm-search-input"
-            placeholder="Search by SKU, part number, or product name..."
+            placeholder="Search by SKU, part number, product name, or category..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search inventory"
@@ -171,22 +290,43 @@ export default function AdminInventory() {
           >
             <option value="all">All Inventory ({variants.length} SKUs)</option>
             <option value="in_stock">
-              In Stock (&gt; 50) (
-              {variants.filter((v) => v.stockQuantity > 50).length})
+              In Stock (&gt; 50) ({variants.filter((v) => Number(v.stockQuantity) > 50).length})
             </option>
             <option value="low_stock">
-              Low Stock (&le; 50) (
-              {variants.filter((v) => v.stockQuantity > 0 && v.stockQuantity <= 50).length})
+              Low Stock (&le; 50) ({lowStockCount})
             </option>
             <option value="out_of_stock">
-              Out of Stock (
-              {variants.filter((v) => v.stockQuantity === 0).length})
+              Out of Stock ({outOfStockCount})
             </option>
           </select>
+
+          <select
+            className="adm-select"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            aria-label="Sort inventory"
+          >
+            <option value="sku_asc">SKU (A–Z)</option>
+            <option value="stock_asc">Stock Level: Lowest First</option>
+            <option value="stock_desc">Stock Level: Highest First</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="price_asc">Price: Low to High</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="adm-btn adm-btn-secondary adm-btn-sm"
+              onClick={handleClearFilters}
+              title="Reset all filters"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Inventory Table */}
+      {/* Main Content Area */}
       {loading ? (
         <div className="adm-loading-screen" role="status">
           <span className="adm-spinner adm-spinner-dark" aria-hidden="true" />
@@ -197,96 +337,196 @@ export default function AdminInventory() {
           <div className="adm-empty-icon" aria-hidden="true">
             📋
           </div>
-          <h3 className="adm-empty-title">No Inventory Items Found</h3>
+          <h3 className="adm-empty-title">
+            {hasActiveFilters ? "No Matching Inventory Items Found" : "No Inventory Items Found"}
+          </h3>
           <p className="adm-empty-desc">
-            No variants matched your search or status filter.
+            {hasActiveFilters
+              ? "No variants matched your search term or stock status filter. Clear the filters to view all catalog inventory."
+              : "No inventory variants are currently registered in the database catalog."}
           </p>
-          <button
-            type="button"
-            className="adm-btn adm-btn-secondary"
-            onClick={() => {
-              setSearchQuery("");
-              setStatusFilter("all");
-            }}
-          >
-            Reset Filters
-          </button>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className="adm-btn adm-btn-secondary"
+              onClick={handleClearFilters}
+            >
+              Clear Filters
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="adm-btn adm-btn-secondary"
+              onClick={loadInventory}
+            >
+              ↻ Refresh Inventory
+            </button>
+          )}
         </div>
       ) : (
         <div className="adm-card" style={{ padding: 0 }}>
-          <div className="adm-table-container">
-            <table className="adm-table">
-              <thead>
-                <tr>
-                  <th>SKU / Part Number</th>
-                  <th>Product &amp; Category</th>
-                  <th>Pack Size &amp; Specs</th>
-                  <th>Unit Price (₹)</th>
-                  <th>Available Quantity</th>
-                  <th>Stock Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredVariants.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <code>{item.sku}</code>
-                      {item.partNumber && (
-                        <div style={{ fontSize: "0.74rem", color: "var(--adm-text-secondary)" }}>
-                          PN: {item.partNumber}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <strong>{item.productName}</strong>
-                      <div style={{ fontSize: "0.76rem", color: "var(--adm-text-secondary)" }}>
-                        {item.categoryName}
-                      </div>
-                    </td>
-                    <td>
-                      {item.packSize || item.name || "Standard"}
-                      {item.dimensions && ` (${item.dimensions})`}
-                    </td>
-                    <td>
-                      <strong>₹{Number(item.price).toLocaleString("en-IN")}</strong>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: "1.05rem", fontWeight: 700 }}>
-                        {item.stockQuantity}
-                      </span>{" "}
-                      <span style={{ fontSize: "0.78rem", color: "var(--adm-text-secondary)" }}>units</span>
-                    </td>
-                    <td>
-                      <span
-                        className={`adm-badge ${
-                          item.stockQuantity > 50
-                            ? "adm-badge-success"
-                            : item.stockQuantity > 0
-                            ? "adm-badge-warning"
-                            : "adm-badge-danger"
-                        }`}
-                      >
-                        {item.stockQuantity > 50
-                          ? "In Stock"
-                          : item.stockQuantity > 0
-                          ? "Low Stock"
-                          : "Out of Stock"}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="adm-btn adm-btn-secondary adm-btn-sm"
-                        onClick={() => handleOpenAdjust(item)}
-                      >
-                        Adjust Stock
-                      </button>
-                    </td>
+          {/* Desktop Table View */}
+          <div className="adm-inventory-desktop-table">
+            <div className="adm-table-container">
+              <table className="adm-table">
+                <thead>
+                  <tr>
+                    <th>SKU / Part Number</th>
+                    <th>Product &amp; Category</th>
+                    <th>Pack Size &amp; Specs</th>
+                    <th>Unit Price</th>
+                    <th>Available Quantity</th>
+                    <th>Stock Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredVariants.map((item) => {
+                    const badge = getStockBadge(item.stockQuantity);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <code>{item.sku}</code>
+                          {item.partNumber && (
+                            <div style={{ fontSize: "0.74rem", color: "var(--adm-text-secondary)" }}>
+                              PN: {item.partNumber}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <strong>{item.productName}</strong>
+                          <div style={{ fontSize: "0.76rem", color: "var(--adm-text-secondary)" }}>
+                            <span className="adm-badge adm-badge-info" style={{ fontSize: "0.7rem", padding: "1px 6px" }}>
+                              {item.categoryName}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          {item.packSize || item.name || "Standard"}
+                          {item.dimensions && ` (${item.dimensions})`}
+                        </td>
+                        <td>
+                          <strong>{formatINR(item.price)}</strong>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--adm-text-primary)" }}>
+                            {item.stockQuantity}
+                          </span>{" "}
+                          <span style={{ fontSize: "0.78rem", color: "var(--adm-text-secondary)" }}>units</span>
+                        </td>
+                        <td>
+                          <span className={`adm-badge ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="adm-btn adm-btn-secondary adm-btn-sm"
+                            onClick={() => handleOpenAdjust(item)}
+                            data-testid={`adjust-stock-${item.sku}`}
+                          >
+                            Adjust Stock
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards View (Optimized for viewports <= 768px) */}
+          <div className="adm-inventory-mobile-cards">
+            {filteredVariants.map((item) => {
+              const badge = getStockBadge(item.stockQuantity);
+              return (
+                <div key={item.id} className="adm-inventory-card">
+                  <div className="adm-inventory-card-header">
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <code>{item.sku}</code>
+                      <span className="adm-badge adm-badge-info" style={{ fontSize: "0.72rem" }}>
+                        {item.categoryName}
+                      </span>
+                    </div>
+                    <span className={`adm-badge ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+
+                  <div className="adm-inventory-card-body">
+                    <div className="adm-inventory-card-item">
+                      <span className="adm-inventory-card-label">Product Name</span>
+                      <span className="adm-inventory-card-value">{item.productName}</span>
+                    </div>
+
+                    <div className="adm-inventory-card-item">
+                      <span className="adm-inventory-card-label">Part Number</span>
+                      <span className="adm-inventory-card-value">{item.partNumber || "—"}</span>
+                    </div>
+
+                    <div className="adm-inventory-card-item">
+                      <span className="adm-inventory-card-label">Specifications</span>
+                      <span className="adm-inventory-card-value">
+                        {item.packSize || item.name || "Standard"}
+                        {item.dimensions && ` (${item.dimensions})`}
+                      </span>
+                    </div>
+
+                    <div className="adm-inventory-card-item">
+                      <span className="adm-inventory-card-label">Unit Price</span>
+                      <span className="adm-inventory-card-value" style={{ color: "var(--adm-primary)" }}>
+                        {formatINR(item.price)}
+                      </span>
+                    </div>
+
+                    <div className="adm-inventory-card-item">
+                      <span className="adm-inventory-card-label">Available Units</span>
+                      <span className="adm-inventory-card-value" style={{ fontSize: "1.05rem" }}>
+                        <strong>{item.stockQuantity} units</strong>
+                      </span>
+                    </div>
+
+                    <div className="adm-inventory-card-item">
+                      <span className="adm-inventory-card-label">Stock Status</span>
+                      <span className={`adm-badge ${badge.className}`} style={{ alignSelf: "flex-start" }}>
+                        {badge.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="adm-inventory-card-footer">
+                    <span style={{ fontSize: "0.78rem", color: "var(--adm-text-muted)" }}>
+                      Audit ID: {item.id.slice(0, 8)}...
+                    </span>
+                    <button
+                      type="button"
+                      className="adm-btn adm-btn-secondary adm-btn-sm"
+                      onClick={() => handleOpenAdjust(item)}
+                    >
+                      Adjust Stock &rarr;
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Table Footer */}
+          <div className="adm-pagination">
+            <span>
+              Showing {filteredVariants.length} of {variants.length} inventory variants
+            </span>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="adm-btn adm-btn-secondary adm-btn-sm"
+                onClick={handleClearFilters}
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -296,7 +536,7 @@ export default function AdminInventory() {
         <div className="adm-modal-backdrop" onClick={() => setAdjustingItem(null)}>
           <div
             className="adm-modal"
-            style={{ maxWidth: 520 }}
+            style={{ maxWidth: 540 }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-labelledby="adjust-stock-title"
@@ -314,7 +554,7 @@ export default function AdminInventory() {
                 ×
               </button>
             </div>
-            <form onSubmit={handleSaveAdjustment}>
+            <form onSubmit={handleSaveAdjustment} className="adm-modal-form">
               <div className="adm-modal-body">
                 {adjustMessage && (
                   <div
@@ -332,12 +572,28 @@ export default function AdminInventory() {
                   </div>
                 )}
 
+                {/* Modal Hero Telemetry */}
+                <div className="adm-inventory-modal-hero">
+                  <div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--adm-text-muted)", textTransform: "uppercase", fontWeight: 700 }}>
+                      Variant SKU
+                    </div>
+                    <code style={{ fontSize: "1.05rem", fontWeight: 700 }}>{adjustingItem.sku}</code>
+                  </div>
+                  <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                    <div style={{ fontSize: "0.76rem", color: "var(--adm-text-muted)" }}>Current Level</div>
+                    <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--adm-primary)" }}>
+                      {adjustingItem.stockQuantity} units
+                    </span>
+                  </div>
+                </div>
+
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: "0.85rem", color: "var(--adm-text-secondary)" }}>
                     Product: <strong>{adjustingItem.productName}</strong>
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--adm-text-secondary)" }}>
-                    Current Available: <strong>{adjustingItem.stockQuantity} units</strong>
+                  <div style={{ fontSize: "0.82rem", color: "var(--adm-text-muted)" }}>
+                    Category: {adjustingItem.categoryName} &bull; Spec: {adjustingItem.packSize || adjustingItem.name || "Standard"}
                   </div>
                 </div>
 

@@ -50,6 +50,7 @@ export default function AdminSidebar({
           onClick={onCloseMobile}
           style={{ zIndex: 95 }}
           aria-hidden="true"
+          data-testid="adm-sidebar-backdrop"
         />
       )}
 

@@ -17,7 +17,7 @@ export default function AdminUnauthorized({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #0B1120 0%, #0f172a 100%)",
+        background: "linear-gradient(135deg, #172554 0%, #0f172a 100%)",
         padding: 24,
         fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
       }}
