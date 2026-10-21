@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGradTek" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </radialGradient>
+
+    <!-- Hardened zinc galvanized steel gradient -->
+    <linearGradient id="tekMetalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="15%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#e2e8f0"/>
+      <stop offset="65%" stop-color="#64748b"/>
+      <stop offset="85%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+
+    <radialGradient id="tekPanDome" cx="45%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#e2e8f0"/>
+      <stop offset="70%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </radialGradient>
+
+    <linearGradient id="phillipsDarkTek" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="60%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+
+    <linearGradient id="tekThreadTooth" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="25%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#94a3b8"/>
+      <stop offset="80%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <filter id="softShadowTek" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+    </filter>
+  </defs>
+
+  <!-- Clean Studio Background -->
+  <rect width="500" height="500" fill="url(#bgGradTek)" rx="16"/>
+  <circle cx="250" cy="250" r="215" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="6,6"/>
+  <path d="M 250 25 L 250 475 M 25 250 L 475 250" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- Soft Contact Drop Shadow -->
+  <ellipse cx="250" cy="445" rx="75" ry="12" fill="#0f172a" fill-opacity="0.14" filter="url(#softShadowTek)"/>
+
+  <!-- Technical Head / Drive Inset Badge (Top Right) -->
+  <g transform="translate(370, 30)">
+    <circle cx="45" cy="45" r="42" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+    <circle cx="45" cy="45" r="36" fill="url(#tekPanDome)" stroke="#64748b" stroke-width="1"/>
+    <!-- Cross / Phillips Inset -->
+    <g fill="url(#phillipsDarkTek)" stroke="#090d16" stroke-width="0.8">
+      <rect x="41" y="23" width="8" height="44" rx="1.5"/>
+      <rect x="23" y="41" width="44" height="8" rx="1.5"/>
+      <polygon points="41,37 45,45 49,37 49,53 45,45 41,53" fill="#090d16"/>
+    </g>
+    <text x="45" y="102" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#475569" letter-spacing="0.5">TEK DRILL POINT</text>
+  </g>
+
+  <!-- Spec Tag (Top Left) -->
+  <g transform="translate(25, 30)">
+    <rect width="115" height="24" rx="4" fill="#0f172a" fill-opacity="0.06" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="57" y="16" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="#0891b2">DIN 7504-N / TEK</text>
+    <rect y="28" width="96" height="20" rx="3" fill="#0891b2" fill-opacity="0.1"/>
+    <text x="48" y="42" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="bold" fill="#0e7490">HARDENED C1022</text>
+  </g>
+
+  <!-- MAIN SCREW (Pan Phillips Self-Drilling TEK) -->
+  <!-- 1. Shank Core Body -->
+  <rect x="218" y="145" width="64" height="215" fill="url(#tekMetalGrad)" stroke="#475569" stroke-width="1.5"/>
+
+  <!-- 2. Self-Drilling Hardened Threads -->
+  <g stroke="#334155" stroke-width="1">
+    <polygon points="210,168 290,182 290,194 210,180" fill="url(#tekThreadTooth)"/>
+    <polygon points="210,198 290,212 290,224 210,210" fill="url(#tekThreadTooth)"/>
+    <polygon points="210,228 290,242 290,254 210,240" fill="url(#tekThreadTooth)"/>
+    <polygon points="210,258 290,272 290,284 210,270" fill="url(#tekThreadTooth)"/>
+    <polygon points="210,288 290,302 290,314 210,300" fill="url(#tekThreadTooth)"/>
+    <polygon points="210,318 290,332 290,344 210,330" fill="url(#tekThreadTooth)"/>
+    <polygon points="212,348 288,360 288,370 212,358" fill="url(#tekThreadTooth)"/>
+  </g>
+
+  <!-- 3. Signature TEK Fluted Drill-Bit Point (Self-Boring Tip) -->
+  <g>
+    <!-- Drill shank transition -->
+    <polygon points="218,360 282,360 274,385 226,385" fill="url(#tekMetalGrad)" stroke="#475569" stroke-width="1.5"/>
+    <!-- Drill bit cutting tip -->
+    <polygon points="226,385 274,385 264,424 250,432 236,424" fill="url(#tekMetalGrad)" stroke="#334155" stroke-width="1.5"/>
+    <!-- Drill flute grooves -->
+    <path d="M 234 385 Q 238 405 246 428" fill="none" stroke="#1e293b" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 266 385 Q 262 405 254 428" fill="none" stroke="#1e293b" stroke-width="3" stroke-linecap="round"/>
+    <!-- Cutting edges chisel angle -->
+    <line x1="236" y1="424" x2="250" y2="432" stroke="#ffffff" stroke-width="2"/>
+    <line x1="264" y1="424" x2="250" y2="432" stroke="#475569" stroke-width="2"/>
+  </g>
+
+  <!-- 4. Pan Head Profile -->
+  <rect x="175" y="136" width="150" height="10" rx="2" fill="url(#tekMetalGrad)" stroke="#334155" stroke-width="1.5"/>
+  <path d="M 175 138 C 175 90, 325 90, 325 138 Z" fill="url(#tekPanDome)" stroke="#334155" stroke-width="2"/>
+
+  <!-- 5. Cross (Phillips) Recess -->
+  <g transform="translate(250, 114)">
+    <polygon points="-5,-26 5,-26 4,26 -4,26" fill="url(#phillipsDarkTek)" stroke="#0f172a" stroke-width="1.2"/>
+    <polygon points="-26,-5 26,-5 26,4 -26,4" fill="url(#phillipsDarkTek)" stroke="#0f172a" stroke-width="1.2"/>
+    <circle cx="0" cy="0" r="4" fill="#090d16"/>
+    <line x1="-26" y1="-5" x2="26" y2="-5" stroke="#ffffff" stroke-width="1" stroke-opacity="0.85"/>
+    <line x1="-5" y1="-26" x2="-5" y2="26" stroke="#ffffff" stroke-width="1" stroke-opacity="0.85"/>
+  </g>
+
+  <!-- Highlight reflections -->
+  <path d="M 195 125 A 50 25 0 0 1 235 100" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-opacity="0.8"/>
+  <line x1="232" y1="148" x2="232" y2="360" stroke="#ffffff" stroke-width="3" stroke-opacity="0.6"/>
+
+  <!-- Bottom Label Bar -->
+  <g transform="translate(0, 460)">
+    <text x="250" y="15" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#1e293b" letter-spacing="0.5">PAN PHILLIPS SELF-DRILLING SCREW • TEK DRILL POINT</text>
+  </g>
+</svg>

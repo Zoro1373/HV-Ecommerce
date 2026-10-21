@@ -1,0 +1,370 @@
+/**
+ * VERTEX Admin Portal API Service
+ * 
+ * Provides client methods to interact with backend catalog, health, authentication,
+ * and administration endpoints.
+ * 
+ * Enforces:
+ * - credentials: "include" for HttpOnly session cookie transmission.
+ * - X-Requested-With: "XMLHttpRequest" for strict CSRF protection.
+ * - Server-side authorization verification.
+ * - Graceful handling and transparent reporting of endpoints scheduled for future phases.
+ */
+
+import { isMockApiEnabled } from "../mock/mockConfig";
+import * as mockAdminApi from "../mock/mockAdminApi";
+
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+const defaultHeaders = {
+  "Content-Type": "application/json",
+  "X-Requested-With": "XMLHttpRequest",
+};
+
+/**
+ * Helper to process API responses safely
+ */
+async function handleResponse(response) {
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    if (!response.ok) {
+      const error = new Error(`Server returned status ${response.status} (${response.statusText})`);
+      error.status = response.status;
+      throw error;
+    }
+    return { success: true };
+  }
+
+  if (!response.ok) {
+    const errorMsg = data?.error?.message || data?.message || "An unexpected error occurred.";
+    const err = new Error(errorMsg);
+    err.code = data?.error?.code || data?.code || "REQUEST_FAILED";
+    err.status = response.status;
+    err.details = data?.error?.details || [];
+    throw err;
+  }
+
+  return data;
+}
+
+/**
+ * Verifies that the current active session has verified ADMIN privileges on the server.
+ * Returns { authorized: true, user } on 200 OK.
+ * Throws with status 401 (unauthenticated) or 403 (unauthorized customer/b2b).
+ */
+export async function verifyAdminAuthorization() {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.verifyAdminAuthorization();
+  }
+
+  const response = await fetch(`${API_BASE}/api/auth/admin-check`, {
+    method: "GET",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Checks server health and database connectivity.
+ */
+export async function getSystemHealth() {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getSystemHealth();
+  }
+
+  const response = await fetch(`${API_BASE}/api/health`, {
+    method: "GET",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Fetches products list with live search, filtering, and pagination from the real catalog API.
+ */
+export async function getAdminProducts({
+  q = "",
+  category = "",
+  brand = "",
+  minPrice = "",
+  maxPrice = "",
+  sort = "newest",
+  page = 1,
+  limit = 12,
+} = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminProducts({
+      q,
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      sort,
+      page,
+      limit,
+    });
+  }
+
+  const query = new URLSearchParams();
+  if (q && q.trim()) query.set("q", q.trim());
+  if (category && category.trim()) query.set("category", category.trim());
+  if (brand && brand.trim()) query.set("brand", brand.trim());
+  if (minPrice !== "" && !isNaN(minPrice)) query.set("minPrice", minPrice);
+  if (maxPrice !== "" && !isNaN(maxPrice)) query.set("maxPrice", maxPrice);
+  if (sort) query.set("sort", sort);
+  if (page) query.set("page", page);
+  if (limit) query.set("limit", limit);
+
+  const response = await fetch(`${API_BASE}/api/products?${query.toString()}`, {
+    method: "GET",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Fetches product details and all variants by slug or UUID.
+ */
+export async function getAdminProductDetails(slugOrId) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminProductDetails(slugOrId);
+  }
+
+  const response = await fetch(`${API_BASE}/api/products/${encodeURIComponent(slugOrId)}`, {
+    method: "GET",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Fetches all active categories with product counts.
+ */
+export async function getAdminCategories() {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminCategories();
+  }
+
+  const response = await fetch(`${API_BASE}/api/categories`, {
+    method: "GET",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Fetches a single category with its products by slug.
+ */
+export async function getAdminCategoryDetails(slug) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminCategoryDetails(slug);
+  }
+
+  const response = await fetch(`${API_BASE}/api/categories/${encodeURIComponent(slug)}`, {
+    method: "GET",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Attempts to create a new product.
+ * Returns the created product or clear message if endpoint is pending.
+ */
+export async function createAdminProduct(productData) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.createAdminProduct(productData);
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/products`, {
+    method: "POST",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify(productData),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Attempts to create a new category.
+ */
+export async function createAdminCategory(categoryData) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.createAdminCategory(categoryData);
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/categories`, {
+    method: "POST",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify(categoryData),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Attempts to update inventory stock for a variant.
+ */
+export async function updateVariantStock(variantId, { stockQuantity, reason }) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.updateVariantStock(variantId, { stockQuantity, reason });
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/inventory/variants/${variantId}`, {
+    method: "PATCH",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify({ stockQuantity, reason }),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Fetches orders list. If endpoint is not yet mounted, returns pending integration status.
+ */
+export async function getAdminOrders({ page = 1, limit = 10, status = "" } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminOrders({ page, limit, status });
+  }
+
+  try {
+    const query = new URLSearchParams({ page, limit });
+    if (status) query.set("status", status);
+
+    const response = await fetch(`${API_BASE}/api/admin/orders?${query.toString()}`, {
+      method: "GET",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "include",
+    });
+
+    if (response.status === 404) {
+      return {
+        isImplemented: false,
+        message: "Orders administration endpoint (GET /api/admin/orders) is scheduled for Phase 6 checkout & order lifecycle integration.",
+        orders: [],
+        pagination: { totalItems: 0, page: 1, limit: 10, totalPages: 0 },
+      };
+    }
+
+    return await handleResponse(response);
+  } catch (err) {
+    if (err.status === 404 || err.message?.includes("404")) {
+      return {
+        isImplemented: false,
+        message: "Orders administration endpoint (GET /api/admin/orders) is scheduled for Phase 6 checkout & order lifecycle integration.",
+        orders: [],
+        pagination: { totalItems: 0, page: 1, limit: 10, totalPages: 0 },
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Fetches customers list. If endpoint is not yet mounted, returns pending integration status.
+ */
+export async function getAdminCustomers({ page = 1, limit = 10, role = "" } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminCustomers({ page, limit, role });
+  }
+
+  try {
+    const query = new URLSearchParams({ page, limit });
+    if (role) query.set("role", role);
+
+    const response = await fetch(`${API_BASE}/api/admin/customers?${query.toString()}`, {
+      method: "GET",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "include",
+    });
+
+    if (response.status === 404) {
+      return {
+        isImplemented: false,
+        message: "Customers management endpoint (GET /api/admin/customers) is scheduled for administrative user management.",
+        customers: [],
+        pagination: { totalItems: 0, page: 1, limit: 10, totalPages: 0 },
+      };
+    }
+
+    return await handleResponse(response);
+  } catch (err) {
+    if (err.status === 404 || err.message?.includes("404")) {
+      return {
+        isImplemented: false,
+        message: "Customers management endpoint (GET /api/admin/customers) is scheduled for administrative user management.",
+        customers: [],
+        pagination: { totalItems: 0, page: 1, limit: 10, totalPages: 0 },
+      };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Fetches audit log events.
+ */
+export async function getAdminAuditLogs({ page = 1, limit = 20 } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminAuditLogs({ page, limit });
+  }
+
+  try {
+    const query = new URLSearchParams({ page, limit });
+    const response = await fetch(`${API_BASE}/api/admin/audit-logs?${query.toString()}`, {
+      method: "GET",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+      credentials: "include",
+    });
+
+    if (response.status === 404) {
+      return {
+        isImplemented: false,
+        message: "Audit Log query endpoint (GET /api/admin/audit-logs) is scheduled for security auditing integration.",
+        logs: [],
+        pagination: { totalItems: 0, page: 1, limit: 20, totalPages: 0 },
+      };
+    }
+
+    return await handleResponse(response);
+  } catch (err) {
+    if (err.status === 404 || err.message?.includes("404")) {
+      return {
+        isImplemented: false,
+        message: "Audit Log query endpoint (GET /api/admin/audit-logs) is scheduled for security auditing integration.",
+        logs: [],
+        pagination: { totalItems: 0, page: 1, limit: 20, totalPages: 0 },
+      };
+    }
+    throw err;
+  }
+}
