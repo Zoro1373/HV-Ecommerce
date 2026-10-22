@@ -27,9 +27,19 @@ export async function listActiveCategories() {
         },
       },
     },
-    orderBy: {
-      name: "asc",
-    },
+  });
+
+  // Fasteners must appear first and Electronic Products second
+  const priorityMap = {
+    fasteners: 1,
+    electronics: 2,
+  };
+
+  categories.sort((a, b) => {
+    const pA = priorityMap[a.slug?.toLowerCase()] || 99;
+    const pB = priorityMap[b.slug?.toLowerCase()] || 99;
+    if (pA !== pB) return pA - pB;
+    return (a.name || "").localeCompare(b.name || "");
   });
 
   return categories.map(formatCategory);

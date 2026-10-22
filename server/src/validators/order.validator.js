@@ -34,3 +34,16 @@ export const createOrderSchema = z
       path: ["addressId"],
     }
   );
+
+export const cancelOrderSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .max(500, "Cancellation reason must not exceed 500 characters.")
+      .optional()
+      .nullable(),
+  })
+  .optional()
+  .default({});
+

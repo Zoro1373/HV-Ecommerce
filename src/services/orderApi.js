@@ -172,3 +172,23 @@ export async function deleteAddress(addressId) {
 
   return handleResponse(response);
 }
+
+/**
+ * Cancels an order owned by the current customer.
+ * Only orders in PENDING or CONFIRMED state can be cancelled.
+ */
+export async function cancelOrder(orderIdentifier, { reason } = {}) {
+  if (isMockApiEnabled()) {
+    return mockOrderApi.cancelOrder(orderIdentifier, { reason });
+  }
+
+  const response = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderIdentifier)}/cancel`, {
+    method: "POST",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify({ reason }),
+  });
+
+  return handleResponse(response);
+}
+

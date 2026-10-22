@@ -36,3 +36,22 @@ export async function getOrder(req, res, next) {
     next(err);
   }
 }
+
+export async function cancelOrder(req, res, next) {
+  try {
+    const order = await orderService.cancelUserOrder(
+      req.user.id,
+      req.params.id,
+      req.body || {},
+      req.user.email
+    );
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully.",
+      order,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+

@@ -438,6 +438,27 @@ a {
   color: #1e40af;
 }
 
+.btn-orders-nav {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #15803d;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-orders-nav:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+
 /* Cart Button */
 .cart-action {
   position: relative;

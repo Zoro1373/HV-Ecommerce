@@ -8,10 +8,12 @@ import AdminProducts from "./AdminProducts";
 import AdminCategories from "./AdminCategories";
 import AdminInventory from "./AdminInventory";
 import AdminOrders from "./AdminOrders";
+import AdminQuotes from "./AdminQuotes";
 import AdminDiscounts from "./AdminDiscounts";
 import AdminRefunds from "./AdminRefunds";
 import AdminReviews from "./AdminReviews";
 import AdminCustomers from "./AdminCustomers";
+import AdminNewsletter from "./AdminNewsletter";
 import AdminReports from "./AdminReports";
 import AdminUsers from "./AdminUsers";
 import AdminSettings from "./AdminSettings";
@@ -186,6 +188,7 @@ export default function AdminLayout({
           {activeSection === "categories" && <AdminCategories />}
           {activeSection === "inventory" && <AdminInventory />}
           {activeSection === "orders" && <AdminOrders />}
+          {activeSection === "quotes" && <AdminQuotes />}
           {activeSection === "discounts" && <AdminDiscounts />}
           {activeSection === "refunds" && (
             <AdminRefunds onNavigateOrders={() => handleSelectSection("orders")} />
@@ -194,6 +197,7 @@ export default function AdminLayout({
           {activeSection === "customers" && (
             <AdminCustomers currentAdminUser={adminUser} />
           )}
+          {activeSection === "newsletter" && <AdminNewsletter />}
           {activeSection === "reports" && <AdminReports />}
           {activeSection === "users" && (
             <AdminUsers currentAdminUser={adminUser} />

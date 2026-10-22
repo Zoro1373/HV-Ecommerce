@@ -9,17 +9,9 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ProductListPage from "./ProductListPage";
+import { MOCK_CATEGORIES, MOCK_PRODUCTS } from "../../mock/mockData";
 
 const mockCategories = [
-  {
-    id: "cat-electronics",
-    name: "Electronic Products",
-    slug: "electronics",
-    children: [
-      { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries" },
-      { id: "sub-hvnex-mcu", name: "HVNEX — Microcontroller Boards", slug: "hvnex-microcontrollers" },
-    ],
-  },
   {
     id: "cat-fasteners",
     name: "Fasteners",
@@ -27,6 +19,15 @@ const mockCategories = [
     children: [
       { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
       { id: "sub-screws-hex", name: "Screws — Hex (Allen)", slug: "screws-hex-allen" },
+    ],
+  },
+  {
+    id: "cat-electronics",
+    name: "Electronic Products",
+    slug: "electronics",
+    children: [
+      { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries" },
+      { id: "sub-hvnex-mcu", name: "HVNEX — Microcontroller Boards", slug: "hvnex-microcontrollers" },
     ],
   },
 ];
@@ -196,5 +197,105 @@ describe("VERTEX ProductListPage Component Suite", () => {
     fireEvent.click(rfqBtns[0]);
 
     expect(screen.getByRole("heading", { name: /Request a Commercial Quote/i })).toBeInTheDocument();
+  });
+
+  test("9. Validates official PDF category ordering: Fasteners is first, Electronic Products is second", () => {
+    expect(MOCK_CATEGORIES[0].name).toBe("Fasteners");
+    expect(MOCK_CATEGORIES[0].slug).toBe("fasteners");
+    expect(MOCK_CATEGORIES[1].name).toBe("Electronic Products");
+    expect(MOCK_CATEGORIES[1].slug).toBe("electronics");
+
+    // Fasteners 6 subcategories in exact PDF order
+    const fastenerSubcats = MOCK_CATEGORIES[0].children.map((c) => c.name);
+    expect(fastenerSubcats).toEqual([
+      "Screws — Flat (Slotted)",
+      "Screws — Cross (Phillips)",
+      "Screws — Hex (Allen)",
+      "Nuts",
+      "Washers",
+      "Brass Inserts",
+    ]);
+
+    // Electronic Products 6 subcategories in exact PDF order
+    const electronicSubcats = MOCK_CATEGORIES[1].children.map((c) => c.name);
+    expect(electronicSubcats).toEqual([
+      "Lithium-Ion Batteries / Cells",
+      "Electronic Components",
+      "HVNEX – Microcontroller Boards",
+      "HVNEX – DC Motor Drivers",
+      "HVNEX – PLC Controller",
+      "HVNEX – DC-DC Buck Converters",
+    ]);
+  });
+
+  test("10. Validates all 39 PDF items exist without duplicates in MOCK_PRODUCTS and have correct category assignments", () => {
+    const pdfNames = [
+      // Fasteners (19)
+      "Slotted CHHD",
+      "Pan Head Screw",
+      "Countersunk (CSK) Screw",
+      "Self-Tapping Pan Head Screw",
+      "Self-Tapping Countersunk (CSK) Screw",
+      "Laptop and Mobile Screws",
+      "Drywall/Gypsum Screws",
+      "Pan Phillips Self-Drilling Screw",
+      "Socket Head Screw",
+      "Button Head Screw",
+      "Allen Countersunk (CSK) Screw",
+      "Hex Nut",
+      "Nyloc Nut",
+      "Wing Nut",
+      "Plain Washer",
+      "Spring Washer",
+      "External Serrated Washer",
+      "3D Printing Brass Threaded Slant Knurled Inserts",
+      "Brass Threaded Inserts",
+
+      // Electronic Products (20)
+      "DMEGC Cylindrical Lithium-Ion Cell 18650 – 3.65V, 2600 mAh, EV Grade",
+      "DMEGC Cylindrical Lithium-Ion Cell 18650 – 3.65V, 2900 mAh, EV Grade",
+      "DMEGC Cylindrical Lithium-Ion Cell 18650 – 3.65V, 3200 mAh, EV Grade",
+      "DMEGC Cylindrical Lithium-Ion Cell 21700 – 3.65V, 4500 mAh, EV Grade",
+      "NORDA NMC Cell 21700 – 4500 mAh",
+      "Panasonic NMC Cell 21700 – 4500 mAh",
+      "NORDA NMC Cell 18650 – 2600 mAh, EV Grade",
+      "GL-12 840-Point Solderless Breadboard",
+      "Jumper Cables",
+      "Male Berg Strip",
+      "Female Berg Strip",
+      "HVNEX-T1",
+      "HVNEX-T2 Mini",
+      "HVNEX-ESP32",
+      "HVNEX-ESP Mini",
+      "HVNEX-D20 – 20A DC Motor Driver",
+      "HVNEX-D60 – 60A DC Motor Driver",
+      "HVNEX-PLC Basic",
+      "HVNEX-BUCK 5V to 3.3V Converter",
+      "HVNEX-BUCK 300W 12A Adjustable Converter (7–32V Input, 0.8–28V Output)",
+    ];
+
+    expect(pdfNames).toHaveLength(39);
+
+    const norm = (s) => (s || "").toLowerCase().replace(/[\u2013\u2014-]/g, "-").replace(/\s+/g, " ").trim();
+
+    // Verify all 39 exist
+    pdfNames.forEach((targetName) => {
+      const found = MOCK_PRODUCTS.find((p) => norm(p.name) === norm(targetName));
+      expect(found).toBeDefined();
+      expect(found.categoryId).toMatch(/cat-fasteners|cat-electronics/);
+      expect(found.subcategory).toBeDefined();
+      expect(found.subcategory.name).toBeTruthy();
+    });
+
+    // Verify no duplicate IDs in catalog
+    const seenIds = new Set();
+    const duplicateIds = [];
+    MOCK_PRODUCTS.forEach((p) => {
+      if (seenIds.has(p.id)) {
+        duplicateIds.push(p.id);
+      }
+      seenIds.add(p.id);
+    });
+    expect(duplicateIds).toEqual([]);
   });
 });

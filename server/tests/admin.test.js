@@ -440,4 +440,85 @@ describe("Admin Backend Phase 1: Products, Categories & Inventory Test Suite", (
     assert.equal(prodRes.body.product.variants[0].sku, variantSku);
     assert.equal(prodRes.body.product.variants[0].stockQuantity, 120, "Stock quantity must be 120 in PostgreSQL");
   });
+
+  // 16. RBAC: Unauthenticated Price Edit Rejected (401)
+  test("16. PATCH /api/admin/products/:id/price rejects unauthenticated requests with 401", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/products/${createdProductId}/price`)
+      .set("X-Requested-With", "XMLHttpRequest")
+      .send({ price: 349.00 });
+
+    assert.equal(res.status, 401);
+  });
+
+  // 17. RBAC: Customer / Non-Admin Price Edit Forbidden (403)
+  test("17. PATCH /api/admin/products/:id/price rejects customer requests with 403 Forbidden", async () => {
+    const res = await request(app)
+      .patch(`/api/admin/products/${createdProductId}/price`)
+      .set("Cookie", customerCookie)
+      .set("X-Requested-With", "XMLHttpRequest")
+      .send({ price: 349.00 });
+
+    assert.equal(res.status, 403);
+  });
+
+  // 18. Validation: Rejects Negative and Non-Numeric Prices (400)
+  test("18. PATCH /api/admin/products/:id/price rejects negative or zero price with 400", async () => {
+    const resNegative = await request(app)
+      .patch(`/api/admin/products/${createdProductId}/price`)
+      .set("Cookie", adminCookie)
+      .set("X-Requested-With", "XMLHttpRequest")
+      .send({ price: -50.00 });
+
+    assert.equal(resNegative.status, 400);
+
+    const resZero = await request(app)
+      .patch(`/api/admin/products/${createdProductId}/price`)
+      .set("Cookie", adminCookie)
+      .set("X-Requested-With", "XMLHttpRequest")
+      .send({ price: 0 });
+
+    assert.equal(resZero.status, 400);
+  });
+
+  // 19. Success: Admin Price Update and Audit Record (200)
+  test("19. PATCH /api/admin/products/:id/price successfully updates price and records audit log", async () => {
+    const newPrice = 299.50;
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${createdProductId}/price`)
+      .set("Cookie", adminCookie)
+      .set("X-Requested-With", "XMLHttpRequest")
+      .send({
+        price: newPrice,
+        variantId: createdVariantId,
+      });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(Number(res.body.variant.price), newPrice);
+
+    // Verify AuditLog entry for price update
+    const priceAudit = await prisma.auditLog.findFirst({
+      where: {
+        entityType: "ProductVariant",
+        entityId: createdVariantId,
+        action: "PRODUCT_PRICE_UPDATED",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    assert.ok(priceAudit, "AuditLog record for price update must exist in PostgreSQL");
+    assert.equal(priceAudit.actorId, adminUser.id);
+    assert.equal(Number(priceAudit.metadata.newPrice), newPrice);
+    assert.equal(priceAudit.metadata.actorEmail, testAdminEmail);
+  });
+
+  // 20. Storefront Consistency: Updated Price Visible without modifying stock
+  test("20. Storefront consistency: GET /api/products/:slug reflects updated selling price while preserving stock", async () => {
+    const prodRes = await request(app).get(`/api/products/${prodSlug}`);
+    assert.equal(prodRes.status, 200);
+    assert.equal(Number(prodRes.body.product.price), 299.50);
+    assert.equal(prodRes.body.product.variants[0].stockQuantity, 120, "Stock quantity must be preserved");
+  });
 });

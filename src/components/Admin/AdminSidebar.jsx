@@ -7,6 +7,7 @@ const navGroups = [
     items: [
       { id: "dashboard", label: "Dashboard", icon: "📊" },
       { id: "orders", label: "Orders", icon: "🚚", badge: "Phase 6" },
+      { id: "quotes", label: "Commercial RFQs", icon: "📑" },
       { id: "refunds", label: "Refunds & Returns", icon: "↩️", badge: "Pending Gateway" },
       { id: "discounts", label: "Discounts & Promos", icon: "🏷️", badge: "Roadmap" },
       { id: "reviews", label: "Product Reviews", icon: "⭐", badge: "Roadmap" },
@@ -24,6 +25,7 @@ const navGroups = [
     groupTitle: "Management & Governance",
     items: [
       { id: "customers", label: "Customers", icon: "👥" },
+      { id: "newsletter", label: "Newsletter", icon: "✉️" },
       { id: "reports", label: "Reports & Analytics", icon: "📈" },
       { id: "users", label: "Admin Users & Roles", icon: "🛡️" },
       { id: "settings", label: "Settings", icon: "⚙️" },
@@ -42,6 +44,17 @@ export default function AdminSidebar({
   onNavigateStorefront,
   healthStatus,
 }) {
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (mobileOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [mobileOpen]);
+
   return (
     <>
       {mobileOpen && (
@@ -75,15 +88,27 @@ export default function AdminSidebar({
               </div>
             )}
           </button>
-          <button
-            type="button"
-            className="adm-sidebar-toggle"
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? "»" : "«"}
-          </button>
+          {mobileOpen ? (
+            <button
+              type="button"
+              className="adm-sidebar-close-mobile"
+              onClick={onCloseMobile}
+              aria-label="Close navigation menu"
+              title="Close navigation"
+            >
+              ✕
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="adm-sidebar-toggle"
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? "»" : "«"}
+            </button>
+          )}
         </div>
 
         <nav className="adm-sidebar-nav" role="navigation">

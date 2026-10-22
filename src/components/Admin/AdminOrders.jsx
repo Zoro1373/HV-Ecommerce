@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getAdminOrders } from "../../services/adminApi";
+import { getAdminOrders, getAdminOrderById, updateAdminOrderStatus } from "../../services/adminApi";
+
+const ALLOWED_STATUS_TRANSITIONS = {
+  PENDING: ["CONFIRMED", "PROCESSING", "CANCELLED"],
+  CONFIRMED: ["PROCESSING", "SHIPPED", "CANCELLED"],
+  PROCESSING: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED", "CANCELLED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
 
 export default function AdminOrders({ initialFilter = "all" }) {
   const [loading, setLoading] = useState(true);
@@ -10,6 +19,14 @@ export default function AdminOrders({ initialFilter = "all" }) {
   const [statusFilter, setStatusFilter] = useState(initialFilter);
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [inspectingOrder, setInspectingOrder] = useState(null);
+
+  // Fulfillment status update state
+  const [targetStatus, setTargetStatus] = useState("");
+  const [carrierInput, setCarrierInput] = useState("");
+  const [trackingNumberInput, setTrackingNumberInput] = useState("");
+  const [notesInput, setNotesInput] = useState("");
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusFeedback, setStatusFeedback] = useState(null);
 
   const loadOrders = useCallback(async (isRefresh = false) => {
     try {
@@ -49,6 +66,95 @@ export default function AdminOrders({ initialFilter = "all" }) {
       document.body.style.overflow = "";
     };
   }, [inspectingOrder]);
+
+  const handleOpenOrder = async (order) => {
+    setInspectingOrder(order);
+    setStatusFeedback(null);
+    const curr = order.orderStatus || order.status || "PENDING";
+    const allowed = ALLOWED_STATUS_TRANSITIONS[curr] || [];
+    setTargetStatus(allowed.length > 0 ? allowed[0] : "");
+    setCarrierInput(order.carrier || "");
+    setTrackingNumberInput(order.trackingNumber || "");
+    setNotesInput(order.notes || "");
+
+    const orderIdentifier = order.id || order.orderNumber;
+    if (orderIdentifier) {
+      try {
+        const res = await getAdminOrderById(orderIdentifier);
+        if (res && res.order) {
+          setInspectingOrder((prev) => {
+            if (!prev) return null;
+            const prevId = prev.id || prev.orderNumber;
+            if (prevId === orderIdentifier) {
+              return { ...prev, ...res.order };
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        // Non-blocking fallback to row summary data
+      }
+    }
+  };
+
+  const handleCloseOrder = () => {
+    setInspectingOrder(null);
+    setStatusFeedback(null);
+  };
+
+  const handleUpdateStatus = async (e) => {
+    if (e && typeof e.preventDefault === "function") {
+      e.preventDefault();
+    }
+    if (!inspectingOrder || !targetStatus || statusUpdating) return;
+
+    try {
+      setStatusUpdating(true);
+      setStatusFeedback(null);
+
+      const orderIdentifier = inspectingOrder.id || inspectingOrder.orderNumber;
+      const res = await updateAdminOrderStatus(orderIdentifier, {
+        orderStatus: targetStatus,
+        carrier: carrierInput.trim() || null,
+        trackingNumber: trackingNumberInput.trim() || null,
+        notes: notesInput.trim() || null,
+      });
+
+      const updated = res.order;
+      // Update currently inspected order in modal
+      setInspectingOrder(updated);
+
+      // Re-initialize target status for next transition
+      const nextAllowed = ALLOWED_STATUS_TRANSITIONS[updated.orderStatus] || [];
+      setTargetStatus(nextAllowed.length > 0 ? nextAllowed[0] : "");
+
+      // Update in orders list in-place for instant table refresh
+      setOrdersResponse((prev) => {
+        if (!prev || !prev.orders) return prev;
+        return {
+          ...prev,
+          orders: prev.orders.map((o) =>
+            o.id === updated.id || o.orderNumber === updated.orderNumber ? updated : o
+          ),
+        };
+      });
+
+      setStatusFeedback({
+        type: "success",
+        text: `Order ${updated.orderNumber} fulfillment status updated to ${updated.orderStatus} successfully.`,
+      });
+
+      // Background refresh to keep counts and server metrics synced
+      loadOrders(true);
+    } catch (err) {
+      setStatusFeedback({
+        type: "error",
+        text: err.message || "Failed to update order fulfillment status.",
+      });
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   const rawOrders = ordersResponse?.orders || [];
 
@@ -186,13 +292,22 @@ export default function AdminOrders({ initialFilter = "all" }) {
       </div>
 
       {/* Integration Status Notice */}
-      <div className="adm-notice-banner adm-notice-info" role="status">
-        <span className="adm-notice-icon">ℹ️</span>
-        <div>
-          <strong>Phase 6 Engineering Roadmap Status:</strong> Customer checkout and order placement endpoints (
-          <code>POST /api/orders</code> &amp; <code>GET /api/admin/orders</code>) are scheduled for Phase 6. The UI schema below is modeled against the active PostgreSQL <code>Order</code> and <code>OrderItem</code> Prisma schema tables.
+      {ordersResponse?.isImplemented ? (
+        <div className="adm-notice-banner adm-notice-success" role="status" style={{ marginBottom: 16 }}>
+          <span className="adm-notice-icon">✓</span>
+          <div>
+            <strong>Phase 9 Admin Orders &amp; Fulfillment Lifecycle Active:</strong> Connected to live <code>GET /api/admin/orders</code> and <code>PATCH /api/admin/orders/:id/status</code> endpoints with authoritative status transitions and audit logging.
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="adm-notice-banner adm-notice-info" role="status">
+          <span className="adm-notice-icon">ℹ️</span>
+          <div>
+            <strong>Phase 6 Engineering Roadmap Status:</strong> Customer checkout and order placement endpoints (
+            <code>POST /api/orders</code> &amp; <code>GET /api/admin/orders</code>) are scheduled for Phase 6. The UI schema below is modeled against the active PostgreSQL <code>Order</code> and <code>OrderItem</code> Prisma schema tables.
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="adm-notice-banner adm-notice-warning" role="alert">
@@ -407,7 +522,7 @@ export default function AdminOrders({ initialFilter = "all" }) {
                           <button
                             type="button"
                             className="adm-btn adm-btn-secondary adm-btn-sm"
-                            onClick={() => setInspectingOrder(order)}
+                            onClick={() => handleOpenOrder(order)}
                             data-testid={`inspect-order-${order.orderNumber}`}
                           >
                             Details
@@ -505,7 +620,7 @@ export default function AdminOrders({ initialFilter = "all" }) {
                     <button
                       type="button"
                       className="adm-btn adm-btn-secondary adm-btn-sm"
-                      onClick={() => setInspectingOrder(order)}
+                      onClick={() => handleOpenOrder(order)}
                     >
                       Details &rarr;
                     </button>
@@ -521,7 +636,7 @@ export default function AdminOrders({ initialFilter = "all" }) {
       {inspectingOrder && (
         <div
           className="adm-modal-backdrop"
-          onClick={() => setInspectingOrder(null)}
+          onClick={handleCloseOrder}
           role="dialog"
           aria-modal="true"
           aria-labelledby="order-details-title"
@@ -543,7 +658,7 @@ export default function AdminOrders({ initialFilter = "all" }) {
               <button
                 type="button"
                 className="adm-modal-close"
-                onClick={() => setInspectingOrder(null)}
+                onClick={handleCloseOrder}
                 aria-label="Close modal"
               >
                 ✕
@@ -683,9 +798,145 @@ export default function AdminOrders({ initialFilter = "all" }) {
                 </div>
               </div>
 
-              {/* Section D: Discount Adjustment (Read-Only Guardrail) */}
+              {/* Section D: Fulfillment Lifecycle & Status Transition */}
+              <div className="adm-order-detail-card" style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <h3 className="adm-section-title" style={{ margin: 0 }}>
+                    D. Fulfillment Lifecycle &amp; Status Transition
+                  </h3>
+                  <span className={`adm-badge ${getOrderStatusBadgeClass(getOrderStatus(inspectingOrder))}`}>
+                    Current: {getOrderStatus(inspectingOrder)}
+                  </span>
+                </div>
+
+                {statusFeedback && (
+                  <div
+                    className={`adm-notice-banner ${
+                      statusFeedback.type === "success"
+                        ? "adm-notice-success"
+                        : statusFeedback.type === "error"
+                        ? "adm-notice-warning"
+                        : "adm-notice-info"
+                    }`}
+                    role="alert"
+                    data-testid="order-status-feedback"
+                    style={{ marginBottom: 14 }}
+                  >
+                    <span className="adm-notice-icon">
+                      {statusFeedback.type === "success" ? "✓" : "⚠️"}
+                    </span>
+                    <div style={{ flex: 1, fontSize: "0.88rem" }}>{statusFeedback.text}</div>
+                    <button
+                      type="button"
+                      className="adm-btn-close"
+                      onClick={() => setStatusFeedback(null)}
+                      aria-label="Dismiss feedback"
+                      style={{ marginLeft: 8 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {(() => {
+                  const currentSt = getOrderStatus(inspectingOrder);
+                  const allowedOptions = ALLOWED_STATUS_TRANSITIONS[currentSt] || [];
+                  const isTerminal = allowedOptions.length === 0;
+
+                  if (isTerminal) {
+                    return (
+                      <div className="adm-notice-banner adm-notice-info" style={{ margin: "8px 0" }}>
+                        <span className="adm-notice-icon">ℹ️</span>
+                        <div>
+                          <strong>Terminal State Reached:</strong> This order is marked as <code>{currentSt}</code>. No further fulfillment lifecycle transitions are permissible under business guardrails.
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <form onSubmit={handleUpdateStatus} style={{ marginTop: 8 }}>
+                      <div className="adm-form-grid">
+                        <div className="adm-form-field">
+                          <label htmlFor="target-order-status">Target Fulfillment Status *</label>
+                          <select
+                            id="target-order-status"
+                            className="adm-select"
+                            data-testid="target-status-select"
+                            value={targetStatus}
+                            onChange={(e) => setTargetStatus(e.target.value)}
+                            disabled={statusUpdating}
+                            required
+                          >
+                            {allowedOptions.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="adm-form-field">
+                          <label htmlFor="order-carrier">Logistics Carrier</label>
+                          <input
+                            id="order-carrier"
+                            type="text"
+                            className="adm-input"
+                            data-testid="carrier-input"
+                            placeholder="e.g. Blue Dart, Delhivery, DTDC"
+                            value={carrierInput}
+                            onChange={(e) => setCarrierInput(e.target.value)}
+                            disabled={statusUpdating}
+                          />
+                        </div>
+
+                        <div className="adm-form-field">
+                          <label htmlFor="order-tracking-num">Waybill / Tracking Number</label>
+                          <input
+                            id="order-tracking-num"
+                            type="text"
+                            className="adm-input"
+                            data-testid="tracking-input"
+                            placeholder="e.g. BLD-9876543210"
+                            value={trackingNumberInput}
+                            onChange={(e) => setTrackingNumberInput(e.target.value)}
+                            disabled={statusUpdating}
+                          />
+                        </div>
+
+                        <div className="adm-form-field">
+                          <label htmlFor="order-fulfillment-notes">Fulfillment Notes / Remarks</label>
+                          <input
+                            id="order-fulfillment-notes"
+                            type="text"
+                            className="adm-input"
+                            data-testid="notes-input"
+                            placeholder="e.g. Dispatched from Bengaluru Central Hub"
+                            value={notesInput}
+                            onChange={(e) => setNotesInput(e.target.value)}
+                            disabled={statusUpdating}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end", gap: 10, alignItems: "center" }}>
+                        <button
+                          type="submit"
+                          className="adm-btn adm-btn-primary"
+                          data-testid="update-order-status-btn"
+                          disabled={statusUpdating || !targetStatus}
+                        >
+                          {statusUpdating ? "Updating Status..." : `Update Status to ${targetStatus || "..."}`}
+                        </button>
+                      </div>
+                    </form>
+                  );
+                })()}
+              </div>
+
+              {/* Section E: Discount Adjustment (Read-Only Guardrail) */}
               <div className="adm-order-detail-card">
-                <h3 className="adm-section-title">D. Order Adjustment &amp; Discount Management</h3>
+                <h3 className="adm-section-title">E. Order Adjustment &amp; Discount Management</h3>
                 <div className="adm-notice-banner adm-notice-warning" style={{ margin: "8px 0" }}>
                   <span className="adm-notice-icon">🔒</span>
                   <div>
@@ -717,7 +968,7 @@ export default function AdminOrders({ initialFilter = "all" }) {
               <button
                 type="button"
                 className="adm-btn adm-btn-secondary"
-                onClick={() => setInspectingOrder(null)}
+                onClick={handleCloseOrder}
               >
                 Close Order Details
               </button>

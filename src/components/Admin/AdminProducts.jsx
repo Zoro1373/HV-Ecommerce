@@ -3,6 +3,8 @@ import {
   getAdminProducts,
   getAdminCategories,
   createAdminProduct,
+  updateAdminProduct,
+  updateProductPrice,
 } from "../../services/adminApi";
 
 // Currency Formatter
@@ -49,10 +51,17 @@ const getProductTotalStock = (p) => {
 // Helper: Calculate minimum price across variants
 const getProductMinPrice = (p) => {
   if (p?.variants && p.variants.length > 0) {
-    const prices = p.variants.map((v) => Number(v.price) || 0);
-    return Math.min(...prices);
+    const validPrices = p.variants
+      .map((v) => v.price)
+      .filter((pr) => pr !== null && pr !== undefined && !isNaN(Number(pr)) && Number(pr) > 0);
+    if (validPrices.length > 0) {
+      return Math.min(...validPrices.map(Number));
+    }
   }
-  return Number(p?.price) || 0;
+  if (p?.price !== null && p?.price !== undefined && !isNaN(Number(p.price)) && Number(p.price) > 0) {
+    return Number(p.price);
+  }
+  return null;
 };
 
 // Helper: Get stock health badge
@@ -95,6 +104,26 @@ export default function AdminProducts() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [modalMessage, setModalMessage] = useState(null);
+
+  // Edit Product & Category Modal State
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    slug: "",
+    categoryId: "",
+    brand: "VERTEX",
+    tag: "",
+    description: "",
+    isActive: true,
+  });
+  const [editModalSubmitting, setEditModalSubmitting] = useState(false);
+  const [editModalMessage, setEditModalMessage] = useState(null);
+
+  // Dedicated Price Editing State
+  const [pricingProduct, setPricingProduct] = useState(null);
+  const [newPriceValue, setNewPriceValue] = useState("");
+  const [priceModalSubmitting, setPriceModalSubmitting] = useState(false);
+  const [priceModalMessage, setPriceModalMessage] = useState(null);
 
   // Specification File Upload State
   const [specFile, setSpecFile] = useState(null);
@@ -164,7 +193,7 @@ export default function AdminProducts() {
 
   // Prevent background page from scrolling while modal is open
   useEffect(() => {
-    if (isAddModalOpen || inspectingProduct) {
+    if (isAddModalOpen || inspectingProduct || editingProduct || pricingProduct) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -172,7 +201,7 @@ export default function AdminProducts() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isAddModalOpen, inspectingProduct]);
+  }, [isAddModalOpen, inspectingProduct, editingProduct, pricingProduct]);
 
   const handleNameChange = (e) => {
     const name = e.target.value;
@@ -316,6 +345,175 @@ export default function AdminProducts() {
     }
   };
 
+  const handleStartEditProduct = (product) => {
+    setEditingProduct(product);
+    const initialCatId = product.subcategory?.id || product.categoryId || product.category?.id || (categories[0]?.id || "");
+    setEditForm({
+      name: product.name || "",
+      slug: product.slug || "",
+      categoryId: initialCatId,
+      brand: product.brand || "VERTEX",
+      tag: product.tag || "",
+      description: product.description || "",
+      isActive: product.isActive !== false,
+    });
+    setEditModalMessage(null);
+  };
+
+  const handleSaveEditProduct = async (e) => {
+    e.preventDefault();
+    setEditModalMessage(null);
+
+    if (!editForm.name.trim()) {
+      setEditModalMessage({
+        type: "error",
+        text: "Product name is required.",
+      });
+      return;
+    }
+
+    if (!editForm.categoryId) {
+      setEditModalMessage({
+        type: "error",
+        text: "Please select a valid category for this product.",
+      });
+      return;
+    }
+
+    // Verify the chosen category is active (search top-level categories and subcategories)
+    let selectedCatObj = categories.find((c) => c.id === editForm.categoryId);
+    let selectedSubObj = null;
+
+    if (!selectedCatObj) {
+      for (const parent of categories) {
+        const found = (parent.children || []).find((sub) => sub.id === editForm.categoryId);
+        if (found) {
+          selectedCatObj = parent;
+          selectedSubObj = found;
+          break;
+        }
+      }
+    }
+
+    if (!selectedCatObj) {
+      setEditModalMessage({
+        type: "error",
+        text: "The selected category is not active or could not be found. Please choose an active category.",
+      });
+      return;
+    }
+
+    try {
+      setEditModalSubmitting(true);
+      const res = await updateAdminProduct(editingProduct.id, {
+        name: editForm.name.trim(),
+        categoryId: editForm.categoryId,
+        brand: editForm.brand.trim() || null,
+        tag: editForm.tag.trim() || null,
+        description: editForm.description.trim() || null,
+        isActive: editForm.isActive,
+      });
+
+      const updated = res?.product || {
+        ...editingProduct,
+        ...editForm,
+        categoryId: selectedCatObj.id,
+        category: { id: selectedCatObj.id, name: selectedCatObj.name, slug: selectedCatObj.slug },
+        subcategory: selectedSubObj ? { id: selectedSubObj.id, name: selectedSubObj.name, slug: selectedSubObj.slug } : null,
+      };
+
+      setProducts((prev) =>
+        prev.map((p) => (p.id === editingProduct.id ? { ...p, ...updated } : p))
+      );
+
+      if (inspectingProduct?.id === editingProduct.id) {
+        setInspectingProduct((prev) => ({ ...prev, ...updated }));
+      }
+
+      setEditModalMessage({
+        type: "success",
+        text: `Product "${updated.name}" and category assignment updated successfully.`,
+      });
+
+      setTimeout(() => {
+        setEditingProduct(null);
+        setEditModalMessage(null);
+      }, 1000);
+    } catch (err) {
+      setEditModalMessage({
+        type: "error",
+        text: err.message || "Failed to update product category and details.",
+      });
+    } finally {
+      setEditModalSubmitting(false);
+    }
+  };
+
+  const handleStartEditPrice = (product) => {
+    setPricingProduct(product);
+    const currentPrice = getProductMinPrice(product);
+    setNewPriceValue(currentPrice !== null && currentPrice !== undefined ? String(currentPrice) : "");
+    setPriceModalMessage(null);
+  };
+
+  const handleSavePrice = async (e) => {
+    e.preventDefault();
+    setPriceModalMessage(null);
+
+    const parsedPrice = parseFloat(newPriceValue);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      setPriceModalMessage({
+        type: "error",
+        text: "Please enter a valid positive selling price (greater than ₹0).",
+      });
+      return;
+    }
+
+    try {
+      setPriceModalSubmitting(true);
+      const targetVariantId = pricingProduct.variants?.[0]?.id || null;
+      await updateProductPrice(pricingProduct.id, {
+        price: parsedPrice,
+        variantId: targetVariantId,
+      });
+
+      // Update local products state immediately
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id === pricingProduct.id) {
+            const updatedVariants = (p.variants || []).map((v, i) =>
+              i === 0 || v.id === targetVariantId ? { ...v, price: parsedPrice } : v
+            );
+            return {
+              ...p,
+              price: parsedPrice,
+              variants: updatedVariants.length > 0 ? updatedVariants : [{ price: parsedPrice }],
+            };
+          }
+          return p;
+        })
+      );
+
+      setPriceModalMessage({
+        type: "success",
+        text: `Selling price for "${pricingProduct.name}" successfully updated to ${formatINR(parsedPrice)}.`,
+      });
+
+      setTimeout(() => {
+        setPricingProduct(null);
+        setPriceModalMessage(null);
+        loadProducts();
+      }, 1000);
+    } catch (err) {
+      setPriceModalMessage({
+        type: "error",
+        text: err.message || "Failed to update product selling price.",
+      });
+    } finally {
+      setPriceModalSubmitting(false);
+    }
+  };
+
   // Resilient multi-criteria client filtering
   const filteredProducts = products.filter((p) => {
     // 1. Stock filter
@@ -338,8 +536,10 @@ export default function AdminProducts() {
     if (selectedCategory) {
       const catSlug = (p.category?.slug || "").toLowerCase();
       const catId = (p.categoryId || p.category?.id || "").toLowerCase();
+      const subSlug = (p.subcategory?.slug || "").toLowerCase();
+      const subId = (p.subcategory?.id || "").toLowerCase();
       const sel = selectedCategory.toLowerCase();
-      if (catSlug !== sel && catId !== sel) return false;
+      if (catSlug !== sel && catId !== sel && subSlug !== sel && subId !== sel) return false;
     }
     return true;
   });
@@ -467,6 +667,20 @@ export default function AdminProducts() {
             }}
             aria-label="Search products"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="adm-search-clear-btn"
+              onClick={() => {
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+              aria-label="Clear search query"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         <div className="adm-filter-group">
@@ -481,9 +695,16 @@ export default function AdminProducts() {
           >
             <option value="">All Categories ({categories.length})</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.slug}>
-                {c.name}
-              </option>
+              <React.Fragment key={c.id}>
+                <option value={c.slug}>
+                  {c.name}
+                </option>
+                {(c.children || []).map((sub) => (
+                  <option key={sub.id} value={sub.slug}>
+                    &nbsp;&nbsp;↳ {sub.name}
+                  </option>
+                ))}
+              </React.Fragment>
             ))}
           </select>
 
@@ -625,9 +846,16 @@ export default function AdminProducts() {
                           </div>
                         </td>
                         <td>
-                          <span className="adm-badge adm-badge-info">
-                            {p.category?.name || "Uncategorized"}
-                          </span>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <span className="adm-badge adm-badge-info" style={{ alignSelf: "flex-start" }}>
+                              {p.category?.name || "Uncategorized"}
+                            </span>
+                            {p.subcategory?.name && (
+                              <span style={{ fontSize: "0.75rem", color: "var(--adm-text-secondary)", fontWeight: 500 }}>
+                                ↳ {p.subcategory.name}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
@@ -644,7 +872,13 @@ export default function AdminProducts() {
                           </div>
                         </td>
                         <td>
-                          <strong style={{ color: "var(--adm-primary)" }}>{formatINR(minPrice)}</strong>
+                          {minPrice !== null ? (
+                            <strong style={{ color: "var(--adm-primary)" }}>{formatINR(minPrice)}</strong>
+                          ) : (
+                            <span className="adm-badge adm-badge-warning" style={{ fontSize: "0.74rem" }} title="Awaiting verified selling price from administrator">
+                              Needs Pricing
+                            </span>
+                          )}
                         </td>
                         <td>
                           <span className={`adm-badge ${stockBadge.className}`}>
@@ -652,12 +886,40 @@ export default function AdminProducts() {
                           </span>
                         </td>
                         <td>
-                          <span className="adm-badge adm-badge-success">
-                            Active
-                          </span>
+                          {p.isActive === false ? (
+                            <span className="adm-badge adm-badge-neutral">
+                              Inactive
+                            </span>
+                          ) : minPrice === null ? (
+                            <span className="adm-badge adm-badge-warning" title="Catalog item registered — awaiting selling price">
+                              Needs Pricing
+                            </span>
+                          ) : (
+                            <span className="adm-badge adm-badge-success">
+                              Active
+                            </span>
+                          )}
                         </td>
                         <td>
                           <div className="adm-table-actions">
+                            <button
+                              type="button"
+                              className="adm-btn adm-btn-secondary adm-btn-sm"
+                              onClick={() => handleStartEditProduct(p)}
+                              data-testid={`edit-product-${p.id}`}
+                              title="Edit product and category assignment"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="adm-btn adm-btn-secondary adm-btn-sm"
+                              onClick={() => handleStartEditPrice(p)}
+                              data-testid={`edit-price-${p.id}`}
+                              title="Edit selling price (Admin only)"
+                            >
+                              Price
+                            </button>
                             <button
                               type="button"
                               className="adm-btn adm-btn-secondary adm-btn-sm"
@@ -717,9 +979,16 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </div>
-                    <span className="adm-badge adm-badge-info">
-                      {p.category?.name || "General"}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
+                      <span className="adm-badge adm-badge-info">
+                        {p.category?.name || "General"}
+                      </span>
+                      {p.subcategory?.name && (
+                        <span style={{ fontSize: "0.72rem", color: "var(--adm-text-secondary)" }}>
+                          ↳ {p.subcategory.name}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="adm-product-card-body">
@@ -740,7 +1009,9 @@ export default function AdminProducts() {
                     <div className="adm-product-card-item">
                       <span className="adm-product-card-label">Starting Price</span>
                       <span className="adm-product-card-value" style={{ color: "var(--adm-primary)" }}>
-                        {formatINR(minPrice)}
+                        {minPrice !== null ? formatINR(minPrice) : (
+                          <span className="adm-badge adm-badge-warning" style={{ fontSize: "0.72rem" }}>Needs Pricing</span>
+                        )}
                       </span>
                     </div>
 
@@ -760,21 +1031,45 @@ export default function AdminProducts() {
 
                     <div className="adm-product-card-item">
                       <span className="adm-product-card-label">Catalog Status</span>
-                      <span className="adm-badge adm-badge-success" style={{ alignSelf: "flex-start" }}>
-                        Active
-                      </span>
+                      {p.isActive === false ? (
+                        <span className="adm-badge adm-badge-neutral" style={{ alignSelf: "flex-start" }}>Inactive</span>
+                      ) : minPrice === null ? (
+                        <span className="adm-badge adm-badge-warning" style={{ alignSelf: "flex-start" }}>Needs Pricing</span>
+                      ) : (
+                        <span className="adm-badge adm-badge-success" style={{ alignSelf: "flex-start" }}>Active</span>
+                      )}
                     </div>
                   </div>
 
                   <div className="adm-product-card-footer">
                     <code style={{ fontSize: "0.76rem", color: "var(--adm-text-muted)" }}>{p.slug}</code>
-                    <button
-                      type="button"
-                      className="adm-btn adm-btn-secondary adm-btn-sm"
-                      onClick={() => setInspectingProduct(p)}
-                    >
-                      Inspect &rarr;
-                    </button>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button
+                        type="button"
+                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                        onClick={() => handleStartEditProduct(p)}
+                        data-testid={`edit-product-card-${p.id || p.slug}`}
+                        title="Edit product and category assignment"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                        onClick={() => handleStartEditPrice(p)}
+                        data-testid={`edit-price-card-${p.id || p.slug}`}
+                        title="Edit selling price (Admin only)"
+                      >
+                        💰 Price
+                      </button>
+                      <button
+                        type="button"
+                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                        onClick={() => setInspectingProduct(p)}
+                      >
+                        Inspect &rarr;
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -868,6 +1163,57 @@ export default function AdminProducts() {
                 </div>
               </div>
 
+              {/* Catalog Completeness & Quality Audit */}
+              {(() => {
+                const inspectPrice = getProductMinPrice(inspectingProduct);
+                const inspectStock = getProductTotalStock(inspectingProduct);
+                const inspectPrimarySku = inspectingProduct.variants?.[0]?.sku || inspectingProduct.sku;
+                const isComplete = inspectPrice !== null && Boolean(inspectPrimarySku) && Boolean(inspectingProduct.specificationFileName) && Boolean(inspectingProduct.imageUrl);
+
+                return (
+                  <div className="adm-readiness-checklist" style={{ margin: "16px 0 20px" }}>
+                    <div className="adm-readiness-header">
+                      <strong className="adm-readiness-title" style={{ fontSize: "0.86rem" }}>
+                        📋 Catalog Readiness &amp; Quality Audit
+                      </strong>
+                      <span className={`adm-badge ${isComplete ? "adm-badge-success" : "adm-badge-warning"}`}>
+                        {isComplete ? "✓ All Data Verified" : "⚠️ Needs Completion"}
+                      </span>
+                    </div>
+                    <div className="adm-readiness-grid">
+                      <div className={`adm-readiness-item ${inspectPrice !== null ? "is-ready" : "is-missing"}`}>
+                        <span className="adm-readiness-icon" aria-hidden="true">{inspectPrice !== null ? "✓" : "⚠️"}</span>
+                        <div>
+                          <strong>Pricing</strong>
+                          <div className="adm-readiness-sub">{inspectPrice !== null ? formatINR(inspectPrice) : "Price Missing (Awaiting Setup)"}</div>
+                        </div>
+                      </div>
+                      <div className={`adm-readiness-item ${inspectPrimarySku ? "is-ready" : "is-missing"}`}>
+                        <span className="adm-readiness-icon" aria-hidden="true">{inspectPrimarySku ? "✓" : "⚠️"}</span>
+                        <div>
+                          <strong>SKU Code</strong>
+                          <div className="adm-readiness-sub">{inspectPrimarySku ? "SKU Configured & Verified" : "No SKU Assigned"}</div>
+                        </div>
+                      </div>
+                      <div className={`adm-readiness-item ${inspectingProduct.specificationFileName ? "is-ready" : "is-missing"}`}>
+                        <span className="adm-readiness-icon" aria-hidden="true">{inspectingProduct.specificationFileName ? "✓" : "ℹ️"}</span>
+                        <div>
+                          <strong>Spec Drawing</strong>
+                          <div className="adm-readiness-sub">{inspectingProduct.specificationFileName ? "PDF/Drawing Attached" : "No Spec Sheet Attached"}</div>
+                        </div>
+                      </div>
+                      <div className={`adm-readiness-item ${inspectStock > 0 ? "is-ready" : "is-missing"}`}>
+                        <span className="adm-readiness-icon" aria-hidden="true">{inspectStock > 0 ? "✓" : "⚠️"}</span>
+                        <div>
+                          <strong>Stock Level</strong>
+                          <div className="adm-readiness-sub">{inspectStock > 0 ? `${inspectStock} units available` : "0 Units (Out of Stock)"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Technical Specifications */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
                 <div>
@@ -930,8 +1276,8 @@ export default function AdminProducts() {
                       {inspectingProduct.specificationFileName.endsWith(".pdf")
                         ? "📕"
                         : inspectingProduct.specificationFileName.endsWith(".csv")
-                        ? "📑"
-                        : "📊"}
+                          ? "📑"
+                          : "📊"}
                     </span>
                     <div style={{ flex: 1 }}>
                       <strong style={{ fontSize: "0.88rem", display: "block" }}>
@@ -978,19 +1324,18 @@ export default function AdminProducts() {
                         </td>
                         <td>
                           <span
-                            className={`adm-badge ${
-                              v.stockQuantity > 50
+                            className={`adm-badge ${v.stockQuantity > 50
                                 ? "adm-badge-success"
                                 : v.stockQuantity > 0
-                                ? "adm-badge-warning"
-                                : "adm-badge-danger"
-                            }`}
+                                  ? "adm-badge-warning"
+                                  : "adm-badge-danger"
+                              }`}
                           >
                             {v.stockQuantity > 50
                               ? "In Stock"
                               : v.stockQuantity > 0
-                              ? "Low Stock"
-                              : "Out of Stock"}
+                                ? "Low Stock"
+                                : "Out of Stock"}
                           </span>
                         </td>
                       </tr>
@@ -1006,6 +1351,18 @@ export default function AdminProducts() {
                 onClick={() => setInspectingProduct(null)}
               >
                 Close
+              </button>
+              <button
+                type="button"
+                className="adm-btn adm-btn-primary"
+                onClick={() => {
+                  const p = inspectingProduct;
+                  setInspectingProduct(null);
+                  handleStartEditProduct(p);
+                }}
+                data-testid="inspect-edit-btn"
+              >
+                ✏️ Edit Product &amp; Category
               </button>
             </div>
           </div>
@@ -1039,11 +1396,10 @@ export default function AdminProducts() {
               <div className="adm-modal-body">
                 {modalMessage && (
                   <div
-                    className={`adm-notice-banner ${
-                      modalMessage.type === "success"
+                    className={`adm-notice-banner ${modalMessage.type === "success"
                         ? "adm-notice-info"
                         : "adm-notice-warning"
-                    }`}
+                      }`}
                     role="alert"
                   >
                     <span className="adm-notice-icon">
@@ -1097,9 +1453,14 @@ export default function AdminProducts() {
                       required
                     >
                       {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
+                        <optgroup key={c.id} label={c.name}>
+                          <option value={c.id}>{c.name} (Main Category)</option>
+                          {(c.children || []).map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              ↳ {sub.name}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>
@@ -1175,13 +1536,13 @@ export default function AdminProducts() {
                     categories.find((c) => c.id === newProduct.categoryId)?.name?.toLowerCase().includes("screw") ||
                     categories.find((c) => c.id === newProduct.categoryId)?.slug?.toLowerCase().includes("fastener")
                   ) && (
-                    <div className="adm-fastener-hint-banner" role="status">
-                      <span style={{ fontSize: "1.1rem" }}>🔩</span>
-                      <div>
-                        <strong>Recommended for Fasteners &amp; Hardware:</strong> Upload standard DIN/ISO drawings (e.g. DIN 933, ISO 4017), thread pitch schedules (M2–M20), tensile proof load charts (Grade 8.8/10.9), or dimensional inspection sheets.
+                      <div className="adm-fastener-hint-banner" role="status">
+                        <span style={{ fontSize: "1.1rem" }}>🔩</span>
+                        <div>
+                          <strong>Recommended for Fasteners &amp; Hardware:</strong> Upload standard DIN/ISO drawings (e.g. DIN 933, ISO 4017), thread pitch schedules (M2–M20), tensile proof load charts (Grade 8.8/10.9), or dimensional inspection sheets.
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Hidden File Input */}
                   <input
@@ -1414,6 +1775,334 @@ export default function AdminProducts() {
                   ) : (
                     "Save & Register Product"
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product & Category Modal */}
+      {editingProduct && (
+        <div className="adm-modal-backdrop" onClick={() => !editModalSubmitting && setEditingProduct(null)}>
+          <div
+            className="adm-modal"
+            style={{ maxWidth: 680, display: "flex", flexDirection: "column", maxHeight: "90vh" }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="edit-product-title"
+          >
+            <div className="adm-modal-header">
+              <h2 id="edit-product-title" className="adm-modal-title">
+                Edit Product &amp; Category Assignment
+              </h2>
+              <button
+                type="button"
+                className="adm-modal-close"
+                onClick={() => !editModalSubmitting && setEditingProduct(null)}
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditProduct} style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+              <div className="adm-modal-body" style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+                {editModalMessage && (
+                  <div className={`adm-modal-alert adm-modal-alert-${editModalMessage.type}`} role="alert" style={{ marginBottom: 16 }}>
+                    <span className="adm-alert-icon" aria-hidden="true">
+                      {editModalMessage.type === "success" ? "✓" : "⚠️"}
+                    </span>
+                    <div>{editModalMessage.text}</div>
+                  </div>
+                )}
+
+                <div className="adm-form-row">
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-prod-name">
+                      Product Name *
+                    </label>
+                    <input
+                      id="edit-prod-name"
+                      type="text"
+                      className="adm-input"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-prod-slug">
+                      URL Slug
+                    </label>
+                    <input
+                      id="edit-prod-slug"
+                      type="text"
+                      className="adm-input"
+                      value={editForm.slug}
+                      disabled
+                      title="Product URL slug identifier"
+                    />
+                  </div>
+                </div>
+
+                <div className="adm-form-row">
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-prod-category">
+                      Assigned Category *
+                    </label>
+                    <select
+                      id="edit-prod-category"
+                      className="adm-select"
+                      style={{ width: "100%" }}
+                      value={editForm.categoryId}
+                      onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
+                      required
+                      data-testid="edit-prod-category-select"
+                    >
+                      {categories.map((c) => (
+                        <optgroup key={c.id} label={c.name}>
+                          <option value={c.id}>{c.name} (Main Category)</option>
+                          {(c.children || []).map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              ↳ {sub.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-prod-brand">
+                      Brand / Manufacturer
+                    </label>
+                    <input
+                      id="edit-prod-brand"
+                      type="text"
+                      className="adm-input"
+                      value={editForm.brand}
+                      onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="adm-form-row">
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-prod-tag">
+                      Promotional Tag / Badge
+                    </label>
+                    <input
+                      id="edit-prod-tag"
+                      type="text"
+                      className="adm-input"
+                      placeholder="e.g. Best Seller, EV Grade, Marine Grade"
+                      value={editForm.tag}
+                      onChange={(e) => setEditForm({ ...editForm, tag: e.target.value })}
+                    />
+                  </div>
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-prod-status">
+                      Storefront Catalog Visibility
+                    </label>
+                    <select
+                      id="edit-prod-status"
+                      className="adm-select"
+                      style={{ width: "100%" }}
+                      value={editForm.isActive ? "true" : "false"}
+                      onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
+                    >
+                      <option value="true">Active (Visible to Customers)</option>
+                      <option value="false">Inactive (Hidden from Customer Catalog)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="adm-form-group">
+                  <label className="adm-label" htmlFor="edit-prod-desc">
+                    Technical Description
+                  </label>
+                  <textarea
+                    id="edit-prod-desc"
+                    className="adm-input"
+                    rows={4}
+                    style={{ resize: "vertical" }}
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="adm-modal-footer">
+                <button
+                  type="button"
+                  className="adm-btn adm-btn-secondary"
+                  disabled={editModalSubmitting}
+                  onClick={() => setEditingProduct(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="adm-btn adm-btn-primary"
+                  disabled={editModalSubmitting}
+                  data-testid="save-edit-product-btn"
+                >
+                  {editModalSubmitting ? "Saving..." : "✓ Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Dedicated Edit Product Selling Price Modal (Admin Only) */}
+      {pricingProduct && (
+        <div
+          className="adm-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-price-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !priceModalSubmitting) {
+              setPricingProduct(null);
+              setPriceModalMessage(null);
+            }
+          }}
+        >
+          <div className="adm-modal" style={{ maxWidth: 540 }}>
+            <div className="adm-modal-header">
+              <div>
+                <h3 id="edit-price-modal-title" className="adm-modal-title">
+                  Edit Selling Price
+                </h3>
+                <p className="adm-modal-subtitle">
+                  Authorized Admin Price Management &bull; Instant Storefront Synchronization
+                </p>
+              </div>
+              <button
+                type="button"
+                className="adm-modal-close"
+                onClick={() => {
+                  setPricingProduct(null);
+                  setPriceModalMessage(null);
+                }}
+                disabled={priceModalSubmitting}
+                aria-label="Close edit price modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePrice}>
+              <div className="adm-modal-body">
+                {priceModalMessage && (
+                  <div
+                    className={`adm-alert ${
+                      priceModalMessage.type === "error" ? "adm-alert-danger" : "adm-alert-success"
+                    }`}
+                    role="alert"
+                    data-testid="edit-price-feedback"
+                  >
+                    <span>{priceModalMessage.type === "error" ? "⚠️" : "✓"}</span>
+                    <span>{priceModalMessage.text}</span>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    background: "var(--adm-bg-surface, #f8fafc)",
+                    border: "1px solid var(--adm-border, #e2e8f0)",
+                    borderRadius: 8,
+                    padding: "14px 16px",
+                    marginBottom: 16,
+                  }}
+                >
+                  <div style={{ fontSize: "0.94rem", fontWeight: 700, color: "var(--adm-text, #0f172a)", marginBottom: 4 }}>
+                    {pricingProduct.name}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--adm-text-secondary, #64748b)", display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                    <span><strong>SKU:</strong> <code>{pricingProduct.variants?.[0]?.sku || pricingProduct.sku || "—"}</code></span>
+                    <span><strong>Category:</strong> {pricingProduct.category?.name || "General"}</span>
+                    {pricingProduct.subcategory?.name && (
+                      <span><strong>Subcategory:</strong> {pricingProduct.subcategory.name}</span>
+                    )}
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ color: "var(--adm-text-secondary, #64748b)" }}>Current Price:</span>
+                    {getProductMinPrice(pricingProduct) !== null ? (
+                      <strong style={{ color: "var(--adm-primary, #ea580c)" }}>
+                        {formatINR(getProductMinPrice(pricingProduct))}
+                      </strong>
+                    ) : (
+                      <span className="adm-badge adm-badge-warning" style={{ fontSize: "0.72rem" }}>
+                        Needs Pricing
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="adm-form-group">
+                  <label className="adm-label" htmlFor="edit-selling-price-input">
+                    Customer Selling Price (INR ₹) *
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: 14,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontSize: "1rem",
+                        fontWeight: 600,
+                        color: "var(--adm-text-secondary, #64748b)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      ₹
+                    </span>
+                    <input
+                      id="edit-selling-price-input"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      className="adm-input"
+                      style={{ paddingLeft: 32, fontSize: "1.05rem", fontWeight: 600 }}
+                      placeholder="e.g. 249.00"
+                      value={newPriceValue}
+                      onChange={(e) => setNewPriceValue(e.target.value)}
+                      required
+                      autoFocus
+                      data-testid="edit-selling-price-input"
+                      disabled={priceModalSubmitting}
+                    />
+                  </div>
+                  <p style={{ margin: "6px 0 0", fontSize: "0.76rem", color: "var(--adm-text-secondary, #64748b)" }}>
+                    Setting this price will immediately update the public storefront, product detail page, and enable Add-to-Cart. Historical orders are strictly preserved.
+                  </p>
+                </div>
+              </div>
+
+              <div className="adm-modal-footer">
+                <button
+                  type="button"
+                  className="adm-btn adm-btn-secondary"
+                  disabled={priceModalSubmitting}
+                  onClick={() => {
+                    setPricingProduct(null);
+                    setPriceModalMessage(null);
+                  }}
+                  data-testid="cancel-edit-price-btn"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="adm-btn adm-btn-primary"
+                  disabled={priceModalSubmitting}
+                  data-testid="save-edit-price-btn"
+                >
+                  {priceModalSubmitting ? "Saving Price..." : "✓ Save Price"}
                 </button>
               </div>
             </form>

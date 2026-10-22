@@ -310,3 +310,147 @@ export async function getUserOrderById(userId, orderIdentifier) {
 
   return formatOrder(order);
 }
+
+/**
+ * Permitted order statuses from which a customer may request self-service cancellation.
+ */
+export const CUSTOMER_CANCELLABLE_STATES = ["PENDING", "CONFIRMED"];
+
+/**
+ * Cancels an order owned by the customer.
+ * Enforces:
+ * - Server-authoritative ownership check.
+ * - Allowed state machine check (only PENDING and CONFIRMED).
+ * - Concurrency guard with updateMany to prevent double cancellation or race conditions.
+ * - Concurrency-safe stock restoration exactly once.
+ * - Audit logging (ORDER_CANCELLED_BY_CUSTOMER).
+ * - Safe payment boundary (no refund claimed or initiated).
+ */
+export async function cancelUserOrder(userId, orderIdentifier, { reason } = {}, userEmail = null) {
+  if (!orderIdentifier || !orderIdentifier.trim()) {
+    const error = new Error("Order identifier is required.");
+    error.code = "INVALID_ORDER_IDENTIFIER";
+    error.status = 400;
+    throw error;
+  }
+
+  const trimmedId = orderIdentifier.trim();
+
+  return prisma.$transaction(
+    async (tx) => {
+      // 1. Locate order by UUID or orderNumber
+      const order = await tx.order.findFirst({
+        where: {
+          OR: [{ id: trimmedId }, { orderNumber: trimmedId }],
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      if (!order) {
+        const error = new Error(`Order '${trimmedId}' not found.`);
+        error.code = "ORDER_NOT_FOUND";
+        error.status = 404;
+        throw error;
+      }
+
+      // 2. Enforce customer ownership
+      if (order.userId !== userId) {
+        const error = new Error("You do not have permission to cancel this order.");
+        error.code = "FORBIDDEN";
+        error.status = 403;
+        throw error;
+      }
+
+      // 3. Status eligibility check
+      if (order.orderStatus === "CANCELLED") {
+        const error = new Error("This order has already been cancelled.");
+        error.code = "ORDER_ALREADY_CANCELLED";
+        error.status = 400;
+        throw error;
+      }
+
+      if (!CUSTOMER_CANCELLABLE_STATES.includes(order.orderStatus)) {
+        const error = new Error(
+          `Cannot cancel order in '${order.orderStatus}' status. Orders that are processing, shipped, or delivered cannot be cancelled online.`
+        );
+        error.code = "ORDER_NOT_CANCELLABLE";
+        error.status = 400;
+        throw error;
+      }
+
+      // 4. Concurrency guard: update status atomically only if it is still in cancellable states
+      const cancellationReason = reason && reason.trim() ? reason.trim() : null;
+      const cancellationNote = cancellationReason
+        ? `${order.notes ? order.notes + " | " : ""}Customer Cancellation: ${cancellationReason}`
+        : order.notes;
+
+      const updateResult = await tx.order.updateMany({
+        where: {
+          id: order.id,
+          orderStatus: { in: CUSTOMER_CANCELLABLE_STATES },
+        },
+        data: {
+          orderStatus: "CANCELLED",
+          notes: cancellationNote,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        const error = new Error(
+          "Order cancellation failed: the order status changed concurrently or was already processed."
+        );
+        error.code = "CONCURRENT_MODIFICATION";
+        error.status = 409;
+        throw error;
+      }
+
+      // 5. Restore reserved inventory exactly once
+      for (const item of order.items) {
+        if (item.variantId) {
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: {
+              stockQuantity: {
+                increment: item.quantity,
+              },
+            },
+          });
+        }
+      }
+
+      // 6. Record audit log entry
+      await tx.auditLog.create({
+        data: {
+          actorId: userId,
+          action: "ORDER_CANCELLED_BY_CUSTOMER",
+          entityType: "Order",
+          entityId: order.id,
+          metadata: {
+            orderNumber: order.orderNumber,
+            previousStatus: order.orderStatus,
+            newStatus: "CANCELLED",
+            actorEmail: userEmail || null,
+            reason: cancellationReason || null,
+          },
+        },
+      });
+
+      // 7. Return updated order
+      const updatedOrder = await tx.order.findUnique({
+        where: { id: order.id },
+        include: {
+          items: true,
+        },
+      });
+
+      return formatOrder(updatedOrder);
+    },
+    {
+      maxWait: 10000,
+      timeout: 25000,
+    }
+  );
+}
+

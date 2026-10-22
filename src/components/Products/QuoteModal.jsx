@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { submitQuoteRequest } from "../../services/quoteApi";
 
 export default function QuoteModal({ product, isOpen, onClose, currentUser }) {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ export default function QuoteModal({ product, isOpen, onClose, currentUser }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rfqNumber, setRfqNumber] = useState("");
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -50,21 +52,40 @@ export default function QuoteModal({ product, isOpen, onClose, currentUser }) {
 
   if (!isOpen || !product) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    // Simulate generation of unique quote tracking ID
-    const generatedId = `RFQ-${Math.floor(100000 + Math.random() * 900000)}`;
-    setTimeout(() => {
-      setSubmitting(false);
+    setSubmitError(null);
+
+    const primarySku = product.variants?.[0]?.sku || product.sku || `VTX-${product.slug?.toUpperCase()}`;
+    const payload = {
+      contactName: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      companyName: formData.company?.trim() || null,
+      productDetails: product.name ? `${product.name} (SKU: ${primarySku})` : primarySku,
+      quantity: Math.max(1, parseInt(formData.quantity, 10) || 1),
+      message: formData.notes?.trim() || null,
+    };
+
+    try {
+      const res = await submitQuoteRequest(payload);
+      const generatedId = res.quote?.id
+        ? `RFQ-${res.quote.id.slice(0, 8).toUpperCase()}`
+        : `RFQ-${Math.floor(100000 + Math.random() * 900000)}`;
       setRfqNumber(generatedId);
       setSubmitted(true);
-    }, 400);
+    } catch (err) {
+      setSubmitError(err.message || "Failed to submit quote request. Please check your inputs.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleResetAndClose = () => {
     setSubmitted(false);
     setRfqNumber("");
+    setSubmitError(null);
     onClose();
   };
 
@@ -120,6 +141,23 @@ export default function QuoteModal({ product, isOpen, onClose, currentUser }) {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="rfq-form">
+              {submitError && (
+                <div
+                  className="rfq-error-alert"
+                  style={{
+                    background: "#fef2f2",
+                    color: "#991b1b",
+                    padding: "10px 14px",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    marginBottom: "16px",
+                    border: "1px solid #fecaca",
+                  }}
+                  role="alert"
+                >
+                  ⚠️ {submitError}
+                </div>
+              )}
               <div className="rfq-product-summary">
                 <div className="rfq-prod-info">
                   <span className="rfq-prod-label">Product Inquired:</span>

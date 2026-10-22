@@ -49,6 +49,67 @@ export const createCategorySchema = z.object({
 });
 
 /**
+ * Parameter validator for admin category routes.
+ */
+export const adminCategoryParamSchema = z.object({
+  id: z
+    .string({ required_error: "Category ID is required" })
+    .trim()
+    .min(1, "Category ID cannot be empty"),
+});
+
+/**
+ * Validator for updating an existing category via Admin API.
+ */
+export const updateCategorySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Category name cannot be empty")
+    .max(100, "Category name cannot exceed 100 characters")
+    .optional(),
+  slug: z
+    .string()
+    .trim()
+    .min(1, "Category slug cannot be empty")
+    .max(120, "Category slug cannot exceed 120 characters")
+    .regex(/^[a-zA-Z0-9-_]+$/, "Slug must only contain letters, numbers, hyphens, and underscores")
+    .optional(),
+  description: z
+    .string()
+    .trim()
+    .max(1000, "Description cannot exceed 1000 characters")
+    .optional()
+    .nullable(),
+  icon: z
+    .string()
+    .trim()
+    .max(50, "Icon identifier cannot exceed 50 characters")
+    .optional()
+    .nullable(),
+  tint: z
+    .string()
+    .trim()
+    .max(50, "Tint identifier cannot exceed 50 characters")
+    .optional()
+    .nullable(),
+  imageUrl: z
+    .string()
+    .trim()
+    .max(500, "Image URL cannot exceed 500 characters")
+    .optional()
+    .nullable(),
+  parentId: z
+    .string()
+    .trim()
+    .uuid("Parent category ID must be a valid UUID")
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
+  isActive: z.boolean().optional(),
+});
+
+/**
  * Validator for creating a product with its initial variant via Admin API.
  */
 export const createProductSchema = z.object({
@@ -154,6 +215,79 @@ export const createProductSchema = z.object({
 });
 
 /**
+ * Validator for admin product route parameter.
+ */
+export const adminProductParamSchema = z.object({
+  id: z
+    .string({ required_error: "Product ID is required" })
+    .trim()
+    .min(1, "Product ID is required"),
+});
+
+/**
+ * Validator for updating a product and its category assignment via Admin API.
+ */
+export const updateProductSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Product name cannot be empty")
+    .max(200, "Product name cannot exceed 200 characters")
+    .optional(),
+  slug: z
+    .string()
+    .trim()
+    .min(1, "Product slug cannot be empty")
+    .max(120, "Product slug cannot exceed 120 characters")
+    .regex(/^[a-zA-Z0-9-_]+$/, "Slug must only contain letters, numbers, hyphens, and underscores")
+    .optional(),
+  categoryId: z
+    .string()
+    .trim()
+    .min(1, "Category ID cannot be empty")
+    .optional(),
+  brand: z
+    .string()
+    .trim()
+    .max(100, "Brand cannot exceed 100 characters")
+    .optional()
+    .nullable(),
+  hsnCode: z
+    .string()
+    .trim()
+    .max(20, "HSN code cannot exceed 20 characters")
+    .optional()
+    .nullable(),
+  gstRate: z
+    .coerce
+    .number({ invalid_type_error: "GST rate must be a number" })
+    .min(0, "GST rate cannot be negative")
+    .max(100, "GST rate cannot exceed 100%")
+    .optional(),
+  tag: z
+    .string()
+    .trim()
+    .max(50, "Tag cannot exceed 50 characters")
+    .optional()
+    .nullable(),
+  imageUrl: z
+    .string()
+    .trim()
+    .max(500, "Image URL cannot exceed 500 characters")
+    .optional()
+    .nullable(),
+  description: z
+    .string()
+    .trim()
+    .max(5000, "Description cannot exceed 5000 characters")
+    .optional()
+    .nullable(),
+  isActive: z
+    .boolean()
+    .optional(),
+});
+
+/**
  * Validator for variant route parameter.
  */
 export const variantParamSchema = z.object({
@@ -178,3 +312,112 @@ export const updateVariantStockSchema = z.object({
     .min(1, "Adjustment reason cannot be empty")
     .max(500, "Adjustment reason cannot exceed 500 characters"),
 });
+
+/**
+ * Validator for admin orders query parameters.
+ */
+export const adminOrdersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  status: z
+    .enum(["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"])
+    .optional()
+    .or(z.literal("")),
+  paymentStatus: z
+    .enum(["PENDING", "PAID", "FAILED", "REFUNDED"])
+    .optional()
+    .or(z.literal("")),
+  search: z.string().trim().max(100).optional().or(z.literal("")),
+  q: z.string().trim().max(100).optional().or(z.literal("")),
+  sort: z.enum(["newest", "oldest", "total_desc", "total_asc"]).default("newest"),
+});
+
+/**
+ * Validator for order route parameter (supports UUID or orderNumber string).
+ */
+export const adminOrderParamSchema = z.object({
+  id: z
+    .string({ required_error: "Order identifier is required" })
+    .trim()
+    .min(1, "Order identifier is required"),
+});
+
+/**
+ * Validator for updating order fulfillment status.
+ */
+export const updateOrderStatusSchema = z.object({
+  orderStatus: z.enum(
+    ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"],
+    { required_error: "Order status is required" }
+  ),
+  carrier: z.string().trim().max(100).optional().nullable(),
+  trackingNumber: z.string().trim().max(100).optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+});
+
+/**
+ * Validator for admin customers query parameters.
+ */
+export const adminCustomersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  search: z.string().trim().max(100).optional().or(z.literal("")),
+  q: z.string().trim().max(100).optional().or(z.literal("")),
+  role: z.enum(["CUSTOMER", "B2B", "all"]).optional().or(z.literal("")),
+  status: z.enum(["active", "suspended", "all"]).optional().or(z.literal("")),
+  sort: z.enum(["newest", "oldest", "name_asc", "name_desc"]).default("newest"),
+});
+
+/**
+ * Validator for admin audit logs query parameters.
+ */
+export const adminAuditLogsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  action: z.string().trim().max(100).optional().or(z.literal("")),
+  entityType: z.string().trim().max(100).optional().or(z.literal("")),
+  actorId: z.string().trim().max(100).optional().or(z.literal("")),
+  search: z.string().trim().max(100).optional().or(z.literal("")),
+  q: z.string().trim().max(100).optional().or(z.literal("")),
+  sort: z.enum(["newest", "oldest"]).default("newest"),
+});
+
+/**
+ * Validator for single customer route parameter.
+ */
+export const adminCustomerParamSchema = z.object({
+  id: z
+    .string({ required_error: "Customer identifier is required" })
+    .trim()
+    .min(1, "Customer identifier is required"),
+});
+
+/**
+ * Validator for admin customer details query parameters (nested orders pagination).
+ */
+export const adminCustomerDetailsQuerySchema = z.object({
+  ordersPage: z.coerce.number().int().min(1).default(1),
+  ordersLimit: z.coerce.number().int().min(1).max(50).default(10),
+});
+
+/**
+ * Validator for updating a product or variant selling price via Admin API.
+ * Enforces positive numeric selling price, rejects negative/malformed prices.
+ */
+export const updateProductPriceSchema = z.object({
+  price: z.coerce
+    .number({
+      required_error: "Selling price is required",
+      invalid_type_error: "Selling price must be a valid number",
+    })
+    .min(0.01, "Selling price must be greater than zero")
+    .max(10000000, "Selling price exceeds maximum allowable limit"),
+  variantId: z
+    .string()
+    .trim()
+    .uuid("Variant ID must be a valid UUID")
+    .optional(),
+});
+
+
+

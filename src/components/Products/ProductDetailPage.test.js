@@ -81,8 +81,9 @@ const sampleRelated = [
 
 describe("VERTEX ProductDetailPage Component Suite", () => {
   beforeEach(() => {
-    if (typeof window !== "undefined" && window.localStorage) {
-      window.localStorage.clear();
+    if (typeof window !== "undefined") {
+      if (window.localStorage) window.localStorage.clear();
+      if (window.sessionStorage) window.sessionStorage.setItem("vertex_mock_mode", "true");
     }
   });
 

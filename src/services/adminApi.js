@@ -213,6 +213,44 @@ export async function createAdminProduct(productData) {
 }
 
 /**
+ * Updates an existing product and its category assignment via Admin API.
+ */
+export async function updateAdminProduct(productId, updateData) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.updateAdminProduct(productId, updateData);
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/products/${encodeURIComponent(productId)}`, {
+    method: "PATCH",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify(updateData),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Updates a product selling price via Admin API.
+ * priceData: { price: number, variantId?: string }
+ */
+export async function updateProductPrice(productId, priceData) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.updateProductPrice(productId, priceData);
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/products/${encodeURIComponent(productId)}/price`, {
+    method: "PATCH",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify(priceData),
+  });
+
+  return handleResponse(response);
+}
+
+
+/**
  * Attempts to create a new category.
  */
 export async function createAdminCategory(categoryData) {
@@ -225,6 +263,24 @@ export async function createAdminCategory(categoryData) {
     headers: defaultHeaders,
     credentials: "include",
     body: JSON.stringify(categoryData),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Updates an existing category via Admin API.
+ */
+export async function updateAdminCategory(categoryId, updateData) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.updateAdminCategory(categoryId, updateData);
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/categories/${encodeURIComponent(categoryId)}`, {
+    method: "PATCH",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify(updateData),
   });
 
   return handleResponse(response);
@@ -249,16 +305,30 @@ export async function updateVariantStock(variantId, { stockQuantity, reason }) {
 }
 
 /**
- * Fetches orders list. If endpoint is not yet mounted, returns pending integration status.
+ * Fetches all orders with filtering, search, and pagination from the Admin API.
  */
-export async function getAdminOrders({ page = 1, limit = 10, status = "" } = {}) {
+export async function getAdminOrders({
+  page = 1,
+  limit = 10,
+  status = "",
+  paymentStatus = "",
+  search = "",
+  q = "",
+  sort = "newest",
+} = {}) {
   if (isMockApiEnabled()) {
-    return mockAdminApi.getAdminOrders({ page, limit, status });
+    return mockAdminApi.getAdminOrders({ page, limit, status, paymentStatus, search: search || q, sort });
   }
 
   try {
-    const query = new URLSearchParams({ page, limit });
-    if (status) query.set("status", status);
+    const query = new URLSearchParams();
+    if (page) query.set("page", page);
+    if (limit) query.set("limit", limit);
+    if (status && status !== "all") query.set("status", status);
+    if (paymentStatus && paymentStatus !== "all") query.set("paymentStatus", paymentStatus);
+    const searchTerm = (search || q || "").trim();
+    if (searchTerm) query.set("search", searchTerm);
+    if (sort) query.set("sort", sort);
 
     const response = await fetch(`${API_BASE}/api/admin/orders?${query.toString()}`, {
       method: "GET",
@@ -269,7 +339,7 @@ export async function getAdminOrders({ page = 1, limit = 10, status = "" } = {})
     if (response.status === 404) {
       return {
         isImplemented: false,
-        message: "Orders administration endpoint (GET /api/admin/orders) is scheduled for Phase 6 checkout & order lifecycle integration.",
+        message: "Orders administration endpoint (GET /api/admin/orders) is scheduled for Phase 9 checkout & order lifecycle integration.",
         orders: [],
         pagination: { totalItems: 0, page: 1, limit: 10, totalPages: 0 },
       };
@@ -280,7 +350,7 @@ export async function getAdminOrders({ page = 1, limit = 10, status = "" } = {})
     if (err.status === 404 || err.message?.includes("404")) {
       return {
         isImplemented: false,
-        message: "Orders administration endpoint (GET /api/admin/orders) is scheduled for Phase 6 checkout & order lifecycle integration.",
+        message: "Orders administration endpoint (GET /api/admin/orders) is scheduled for Phase 9 checkout & order lifecycle integration.",
         orders: [],
         pagination: { totalItems: 0, page: 1, limit: 10, totalPages: 0 },
       };
@@ -290,16 +360,54 @@ export async function getAdminOrders({ page = 1, limit = 10, status = "" } = {})
 }
 
 /**
+ * Fetches a single order by UUID or orderNumber from the Admin API.
+ */
+export async function getAdminOrderById(orderIdentifier) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminOrderById(orderIdentifier);
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderIdentifier)}`, {
+    method: "GET",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Updates order fulfillment status via Admin API.
+ */
+export async function updateAdminOrderStatus(orderId, { orderStatus, carrier, trackingNumber, notes }) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.updateAdminOrderStatus(orderId, { orderStatus, carrier, trackingNumber, notes });
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/orders/${encodeURIComponent(orderId)}/status`, {
+    method: "PATCH",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify({ orderStatus, carrier, trackingNumber, notes }),
+  });
+
+  return handleResponse(response);
+}
+
+/**
  * Fetches customers list. If endpoint is not yet mounted, returns pending integration status.
  */
-export async function getAdminCustomers({ page = 1, limit = 10, role = "" } = {}) {
+export async function getAdminCustomers({ page = 1, limit = 10, role = "", status = "", search = "", sort = "" } = {}) {
   if (isMockApiEnabled()) {
-    return mockAdminApi.getAdminCustomers({ page, limit, role });
+    return mockAdminApi.getAdminCustomers({ page, limit, role, status, search, sort });
   }
 
   try {
     const query = new URLSearchParams({ page, limit });
-    if (role) query.set("role", role);
+    if (role && role !== "all") query.set("role", role);
+    if (status && status !== "all") query.set("status", status);
+    if (search && search.trim()) query.set("search", search.trim());
+    if (sort) query.set("sort", sort);
 
     const response = await fetch(`${API_BASE}/api/admin/customers?${query.toString()}`, {
       method: "GET",
@@ -331,15 +439,40 @@ export async function getAdminCustomers({ page = 1, limit = 10, role = "" } = {}
 }
 
 /**
+ * Fetches single customer details with address book, order history, RFQs, and spend metrics.
+ */
+export async function getAdminCustomerDetails(customerId, { ordersPage = 1, ordersLimit = 10 } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminCustomerDetails(customerId, { ordersPage, ordersLimit });
+  }
+
+  const query = new URLSearchParams({ ordersPage, ordersLimit });
+  const response = await fetch(`${API_BASE}/api/admin/customers/${encodeURIComponent(customerId)}?${query.toString()}`, {
+    method: "GET",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
  * Fetches audit log events.
  */
-export async function getAdminAuditLogs({ page = 1, limit = 20 } = {}) {
+
+export async function getAdminAuditLogs({ page = 1, limit = 20, action = "", entityType = "", actorId = "", search = "", sort = "" } = {}) {
   if (isMockApiEnabled()) {
-    return mockAdminApi.getAdminAuditLogs({ page, limit });
+    return mockAdminApi.getAdminAuditLogs({ page, limit, action, entityType, actorId, search, sort });
   }
 
   try {
     const query = new URLSearchParams({ page, limit });
+    if (action && action !== "all") query.set("action", action);
+    if (entityType && entityType !== "all") query.set("entityType", entityType);
+    if (actorId && actorId !== "all") query.set("actorId", actorId);
+    if (search && search.trim()) query.set("search", search.trim());
+    if (sort) query.set("sort", sort);
+
     const response = await fetch(`${API_BASE}/api/admin/audit-logs?${query.toString()}`, {
       method: "GET",
       headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -368,3 +501,80 @@ export async function getAdminAuditLogs({ page = 1, limit = 20 } = {}) {
     throw err;
   }
 }
+
+/**
+ * Lists commercial RFQ quote requests via Admin API.
+ */
+export async function getAdminQuotes({ page = 1, limit = 10, status = "", search = "" } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminQuotes({ page, limit, status, search });
+  }
+
+  const query = new URLSearchParams({ page, limit });
+  if (status && status !== "all") query.set("status", status);
+  if (search && search.trim()) query.set("search", search.trim());
+
+  const response = await fetch(`${API_BASE}/api/admin/quotes?${query.toString()}`, {
+    method: "GET",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Retrieves a single quote request by ID via Admin API.
+ */
+export async function getAdminQuoteById(id) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminQuoteById(id);
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/quotes/${encodeURIComponent(id)}`, {
+    method: "GET",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Updates a quote request status, notes, or quoted amount via Admin API.
+ */
+export async function updateAdminQuote(id, { status, adminNotes, quotedAmount }) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.updateAdminQuote(id, { status, adminNotes, quotedAmount });
+  }
+
+  const response = await fetch(`${API_BASE}/api/admin/quotes/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: defaultHeaders,
+    credentials: "include",
+    body: JSON.stringify({ status, adminNotes, quotedAmount }),
+  });
+
+  return handleResponse(response);
+}
+
+/**
+ * Lists newsletter subscriptions via Admin API.
+ */
+export async function getAdminNewsletterSubscriptions({ page = 1, limit = 20, search = "" } = {}) {
+  if (isMockApiEnabled()) {
+    return mockAdminApi.getAdminNewsletter({ page, limit, search });
+  }
+
+  const query = new URLSearchParams({ page, limit });
+  if (search && search.trim()) query.set("search", search.trim());
+
+  const response = await fetch(`${API_BASE}/api/admin/newsletter?${query.toString()}`, {
+    method: "GET",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    credentials: "include",
+  });
+
+  return handleResponse(response);
+}
+
