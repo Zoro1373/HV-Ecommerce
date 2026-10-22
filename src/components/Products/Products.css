@@ -503,15 +503,35 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  overflow: visible;
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
   box-shadow: var(--shadow-sm);
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
-.product-card:hover {
-  transform: translateY(-3px);
-  border-color: #94a3b8;
-  box-shadow: var(--shadow-md);
+.product-card.is-tilting,
+.product-card:hover,
+.product-card:focus-within {
+  border-color: rgba(30, 175, 219, 0.45);
+  z-index: 10;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.product-grid,
+.vtx-rail-track,
+.vtx-catalog-products-grid,
+.vtx-related-grid {
+  perspective: 1200px;
+}
+
+.product-thumb {
+  border-top-left-radius: calc(var(--radius) - 1px);
+  border-top-right-radius: calc(var(--radius) - 1px);
+  overflow: hidden;
 }
 
 .vtx-card-wishlist-btn {

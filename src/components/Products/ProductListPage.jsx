@@ -880,7 +880,7 @@ export default function ProductListPage({
           ) : (
             /* Product Grid / List */
             <div className={viewMode === "list" ? "product-list-view" : "product-grid"}>
-              {filteredProducts.map((p) => (
+              {filteredProducts.map((p, idx) => (
                 <ProductCard
                   key={p.id || p.slug}
                   product={p}
@@ -888,6 +888,7 @@ export default function ProductListPage({
                   onAddToCart={onAddToCart}
                   onViewDetails={onViewDetails}
                   onRequestQuote={(prod) => setQuoteProduct(prod)}
+                  revealIndex={idx}
                 />
               ))}
             </div>
