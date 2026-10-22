@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import logo from "./assets/logo.png";
-import arduinoImg from "./assets/hardware/arduino.jpg";
 import LoginPage from "./components/Login/LoginPage";
 import AdminLayout from "./components/Admin/AdminLayout";
 import CartDrawer from "./components/Cart/CartDrawer";
@@ -582,12 +581,7 @@ export default function App() {
       setCartError("Unable to add product: no purchasable variant found.");
       return;
     }
-
-    // If product has no price or is quote-only, open quote modal
-    if (product.price === null || product.price === undefined) {
-      setQuoteProduct(product);
-      return;
-    }
+    // Quote-only items can be added directly to cart as quote-required items
 
     const qty = Math.max(1, parseInt(quantity, 10) || 1);
     setPendingCartAction({ type: "add", id: targetVariant.id });

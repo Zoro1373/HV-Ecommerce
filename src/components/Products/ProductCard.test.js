@@ -175,7 +175,7 @@ describe("VERTEX ProductCard Component with 3D Tilt Suite", () => {
     expect(onAddToCart).toHaveBeenCalledWith(mockProduct, mockProduct.variants[0]);
   });
 
-  test("6. Clicking Specs button invokes onViewDetails handler", () => {
+  test("6. Clicking product title or thumbnail invokes onViewDetails handler", () => {
     render(
       <ProductCard
         product={mockProduct}
@@ -185,14 +185,14 @@ describe("VERTEX ProductCard Component with 3D Tilt Suite", () => {
       />
     );
 
-    const specsBtn = screen.getByTitle("View Technical Specs");
-    fireEvent.click(specsBtn);
+    const titleEl = screen.getByText("Arduino Uno R3 Microcontroller");
+    fireEvent.click(titleEl);
 
     expect(onViewDetails).toHaveBeenCalledTimes(1);
     expect(onViewDetails).toHaveBeenCalledWith(mockProduct);
   });
 
-  test("7. Unpriced products render 'Quote on Request' and clicking Request Quote invokes onRequestQuote", () => {
+  test("7. Unpriced products render 'Quote on Request' and clicking primary Add to Cart adds item as quote-required", () => {
     render(
       <ProductCard
         product={mockQuoteProduct}
@@ -205,12 +205,12 @@ describe("VERTEX ProductCard Component with 3D Tilt Suite", () => {
     expect(screen.getByText("Quote on Request")).toBeInTheDocument();
     expect(screen.getByText(/Commercial \/ Volume Sourcing/i)).toBeInTheDocument();
 
-    const quoteBtn = screen.getByTestId("add-to-cart-prod-2");
-    expect(quoteBtn).toHaveTextContent(/Request Quote/i);
+    const addBtn = screen.getByTestId("add-to-cart-prod-2");
+    expect(addBtn).toHaveTextContent(/Add to Cart/i);
 
-    fireEvent.click(quoteBtn);
-    expect(onRequestQuote).toHaveBeenCalledTimes(1);
-    expect(onRequestQuote).toHaveBeenCalledWith(mockQuoteProduct);
+    fireEvent.click(addBtn);
+    expect(onAddToCart).toHaveBeenCalledTimes(1);
+    expect(onAddToCart).toHaveBeenCalledWith(mockQuoteProduct, undefined);
   });
 
   test("8. Clicking Wishlist button toggles saved status", () => {

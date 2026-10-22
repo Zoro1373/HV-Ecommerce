@@ -403,7 +403,7 @@ export default function ProductCard({
             : "Available on Inquiry"}
         </p>
 
-        {/* Action Buttons */}
+        {/* Action Buttons: Primary Add to Cart Button replacing Specs & Request Quote */}
         <div
           className="product-actions-row"
           style={{
@@ -411,44 +411,18 @@ export default function ProductCard({
             transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
-          {onViewDetails && (
-            <motion.button
-              type="button"
-              className="btn btn-outline btn-specs"
-              onClick={() => onViewDetails(product)}
-              title="View Technical Specs"
-              whileHover={prefersReducedMotion ? undefined : { scale: 1.03 }}
-              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-            >
-              Specs
-            </motion.button>
-          )}
-
-          {hasPrice ? (
-            <motion.button
-              type="button"
-              className="btn btn-outline btn-cart"
-              onClick={() => onAddToCart && onAddToCart(product, primaryVariant)}
-              disabled={!inStock || isAdding}
-              data-testid={`add-to-cart-${product.id || product.slug}`}
-              whileHover={prefersReducedMotion || !inStock ? undefined : { scale: 1.03 }}
-              whileTap={prefersReducedMotion || !inStock ? undefined : { scale: 0.97 }}
-            >
-              {isAdding ? "Adding..." : "🛒 Add to Cart"}
-            </motion.button>
-          ) : (
-            <motion.button
-              type="button"
-              className="btn btn-outline btn-rfq"
-              onClick={() => onRequestQuote ? onRequestQuote(product) : (onViewDetails && onViewDetails(product))}
-              title="Request a Commercial Price Quote"
-              data-testid={`add-to-cart-${product.id || product.slug}`}
-              whileHover={prefersReducedMotion ? undefined : { scale: 1.03 }}
-              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-            >
-              📋 Request Quote
-            </motion.button>
-          )}
+          <motion.button
+            type="button"
+            className="btn btn-primary btn-cart vtx-card-add-to-cart"
+            onClick={() => onAddToCart && onAddToCart(product, primaryVariant)}
+            disabled={!inStock || isAdding}
+            data-testid={`add-to-cart-${product.id || product.slug}`}
+            aria-label={`Add ${product.name} to cart`}
+            whileHover={prefersReducedMotion || !inStock ? undefined : { scale: 1.02 }}
+            whileTap={prefersReducedMotion || !inStock ? undefined : { scale: 0.98 }}
+          >
+            {isAdding ? "Adding..." : "🛒 Add to Cart"}
+          </motion.button>
         </div>
       </div>
     </motion.div>
