@@ -7,7 +7,7 @@ Filenames/URLs `[OBSERVED]`; dimensions and true formats not verified (PNG infer
 | Hero banners | 4 | `Unbeatable_prices_no_MOQ_Best_quality._All_in_one_place_11.png` (+ `_2_…`, `_9`, `_5`) | Hero | **No** — contain brand copy; create VERTEX banners |
 | Client logos | 12 | `Untitled_design_30.png` … (Zomato Hyperpure, Delhivery, Atomberg, Philips, Zoho, Ultraviolette, Agnikul, Ather, VVDN, Kreo, UST, SR) | Trusted by | **No** — third-party trademarks, permission unknown |
 | Category images | 41 | `2_ac7ce134-….png`, `3.png`, `4.png`, `OS_Products_11.png` … | Category grid | **No** — use VERTEX imagery |
-| Product images | 9 + 6 + 9 (×2 images) | `hex-nuts-and-washers-assorted-screw-pack-…png`, `1_afdc1a41-….png` | Rails | **No** — use VERTEX product data/images |
+| Product images | 10 + 6 + 10 (×2 images on pack cards) | `hex-nuts-and-washers-assorted-screw-pack-…png`, `1_afdc1a41-….png` | Rails | **No** — use VERTEX product data/images |
 | Bearing tiles | 4 | `LM12UU_Linear_Motion_Slider_Bearing.png` | New in Bearings | No |
 | Blog images | 3 | `onlyscrews-article04-helicoil-stripped-thread.png` | Blog | No |
 | Value-prop tiles | 4 | `7_ee0e….png`, `9_9afc….png`, `8_5e25….png`, `best_quality.png` | Value props | No |

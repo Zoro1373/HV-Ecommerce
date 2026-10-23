@@ -2,7 +2,7 @@ import { Router } from "express";
 import * as orderController from "../controllers/order.controller.js";
 import { authenticateSession } from "../middleware/auth.middleware.js";
 import { validateBody, validateParams } from "../middleware/validate.middleware.js";
-import { createOrderSchema, orderParamSchema } from "../validators/order.validator.js";
+import { createOrderSchema, orderParamSchema, cancelOrderSchema } from "../validators/order.validator.js";
 
 export const orderRouter = Router();
 
@@ -26,3 +26,15 @@ orderRouter.get("/:id", validateParams(orderParamSchema), orderController.getOrd
  * Places a new order from the user's cart using server-authoritative totals and atomic stock decrements.
  */
 orderRouter.post("/", validateBody(createOrderSchema), orderController.createOrder);
+
+/**
+ * POST /api/orders/:id/cancel
+ * Cancels an order owned by the authenticated customer if in an eligible state, restoring inventory atomically.
+ */
+orderRouter.post(
+  "/:id/cancel",
+  validateParams(orderParamSchema),
+  validateBody(cancelOrderSchema),
+  orderController.cancelOrder
+);
+

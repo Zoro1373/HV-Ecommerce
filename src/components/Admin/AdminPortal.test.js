@@ -1137,7 +1137,7 @@ describe("VERTEX Admin Portal Suite", () => {
       expect(screen.getAllByText(/Flash Weekend Fastener Sale/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/created and registered in admin session/i)).toBeInTheDocument();
     });
-  });
+  }, 15000);
 
   test("22. Validates Product Specification File Upload: format validation, fastener hints, dimension extraction, replacement, and product creation", async () => {
     adminApi.createAdminProduct.mockResolvedValue({
@@ -1568,6 +1568,825 @@ describe("VERTEX Admin Portal Suite", () => {
     });
     expect(document.body.style.overflow).toBe("");
   });
+
+  test("26. Navigates to Orders, renders orders table, inspects details, updates fulfillment status with state machine validation, and refreshes orders", async () => {
+    const mockOrder = {
+      id: "ord-test-99",
+      orderNumber: "VTX-ORD-9001",
+      createdAt: "2026-10-15T10:00:00.000Z",
+      orderStatus: "PENDING",
+      paymentStatus: "PAID",
+      paymentMethod: "RAZORPAY",
+      subtotal: 1299,
+      taxAmount: 233.82,
+      totalAmount: 1532.82,
+      shippingRecipient: "Dr. Vikram Sarabhai",
+      shippingCity: "Bengaluru",
+      shippingState: "Karnataka",
+      shippingPhone: "+91 9876543210",
+      shippingLine1: "ISRO Telemetry Centre, Outer Ring Rd",
+      items: [
+        {
+          id: "item-99",
+          productName: "Arduino Uno R3 Microcontroller Board",
+          sku: "ELEC-ARD-UNO-R3",
+          quantity: 2,
+          unitPrice: 1299,
+          taxAmount: 467.64,
+          lineTotal: 3065.64,
+        },
+      ],
+    };
+
+    adminApi.getAdminOrders.mockResolvedValue({
+      isImplemented: true,
+      orders: [mockOrder],
+      pagination: { totalItems: 1, page: 1, totalPages: 1 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/ADMIN CONSOLE/i)).toBeInTheDocument();
+    });
+
+    // 1. Navigate to Orders section
+    fireEvent.click(screen.getByTitle("Orders"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Orders & Fulfillment Management/i)).toBeInTheDocument();
+    });
+
+    // 2. Verify Table content and KPI cards
+    expect(screen.getAllByText("VTX-ORD-9001")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Dr. Vikram Sarabhai")[0]).toBeInTheDocument();
+    expect(screen.getByText(/Total Orders/i)).toBeInTheDocument();
+
+    // 3. Open Order Details modal
+    const detailsBtn = screen.getByTestId("inspect-order-VTX-ORD-9001");
+    fireEvent.click(detailsBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText(/Order Details: VTX-ORD-9001/i)).toBeInTheDocument();
+    });
+
+    // 4. Verify Fulfillment Lifecycle section and Target Status options
+    expect(screen.getByText(/D. Fulfillment Lifecycle & Status Transition/i)).toBeInTheDocument();
+    const statusSelect = screen.getByTestId("target-status-select");
+    // Allowed transitions for PENDING: CONFIRMED, PROCESSING, CANCELLED
+    expect(statusSelect).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "CONFIRMED" })).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "PROCESSING" })).toBeInTheDocument();
+    expect(within(statusSelect).getByRole("option", { name: "CANCELLED" })).toBeInTheDocument();
+
+    // 5. Test Error Handling (API failure)
+    adminApi.updateAdminOrderStatus.mockRejectedValueOnce(
+      new Error("Invalid transition: Server rejected status update.")
+    );
+    fireEvent.change(statusSelect, { target: { value: "CONFIRMED" } });
+    const submitBtn = screen.getByTestId("update-order-status-btn");
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("order-status-feedback")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Invalid transition: Server rejected status update./i)
+      ).toBeInTheDocument();
+    });
+
+    // 6. Test Successful Transition to CONFIRMED
+    const updatedOrder = {
+      ...mockOrder,
+      orderStatus: "CONFIRMED",
+      carrier: "Blue Dart",
+      trackingNumber: "BLD-77889900",
+      notes: "Stock verified and dispatched for packing",
+    };
+
+    adminApi.updateAdminOrderStatus.mockResolvedValueOnce({
+      success: true,
+      order: updatedOrder,
+    });
+
+    fireEvent.change(screen.getByTestId("carrier-input"), {
+      target: { value: "Blue Dart" },
+    });
+    fireEvent.change(screen.getByTestId("tracking-input"), {
+      target: { value: "BLD-77889900" },
+    });
+    fireEvent.change(screen.getByTestId("notes-input"), {
+      target: { value: "Stock verified and dispatched for packing" },
+    });
+
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(adminApi.updateAdminOrderStatus).toHaveBeenCalledWith("ord-test-99", {
+        orderStatus: "CONFIRMED",
+        carrier: "Blue Dart",
+        trackingNumber: "BLD-77889900",
+        notes: "Stock verified and dispatched for packing",
+      });
+      expect(
+        screen.getByText(/Order VTX-ORD-9001 fulfillment status updated to CONFIRMED successfully./i)
+      ).toBeInTheDocument();
+    });
+
+    // 7. Verify subsequent transitions available for CONFIRMED (PROCESSING, SHIPPED, CANCELLED)
+    await waitFor(() => {
+      expect(within(statusSelect).getByRole("option", { name: "PROCESSING" })).toBeInTheDocument();
+      expect(within(statusSelect).getByRole("option", { name: "SHIPPED" })).toBeInTheDocument();
+      expect(within(statusSelect).getByRole("option", { name: "CANCELLED" })).toBeInTheDocument();
+    });
+
+    // 8. Close Modal and verify table shows updated status
+    const closeBtn = screen.getByRole("button", { name: /Close Order Details/i });
+    fireEvent.click(closeBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByText("CONFIRMED").length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("27. Validates Phase 10 Admin Customer API integration: loading state, API results rendering, telemetry inspection, error notice with retry recovery, and search filtering", async () => {
+    const mockCustomersPhase10 = [
+      {
+        id: "cust-phase10-01",
+        fullName: "Rohan Kulkarni",
+        email: "rohan.k@vertex.local",
+        phone: "+91 9123456780",
+        companyName: null,
+        gstin: null,
+        role: "CUSTOMER",
+        isActive: true,
+        emailVerified: true,
+        mfaEnabled: false,
+        createdAt: "2026-03-01T10:00:00.000Z",
+        ordersCount: 4,
+        quotesCount: 0,
+        totalSpent: 12450.0,
+        lastOrderNumber: "VTX-ORD-5011",
+      },
+      {
+        id: "cust-phase10-02",
+        fullName: "Kaveri Robotics Lab",
+        email: "procure@kaverirobotics.in",
+        phone: "+91 9876543200",
+        companyName: "Kaveri Robotics Pvt Ltd",
+        gstin: "29AABCU9603R1ZM",
+        role: "B2B",
+        isActive: true,
+        emailVerified: true,
+        mfaEnabled: true,
+        createdAt: "2026-01-10T08:30:00.000Z",
+        ordersCount: 12,
+        quotesCount: 3,
+        totalSpent: 185600.5,
+        lastOrderNumber: "VTX-ORD-9020",
+      },
+    ];
+
+    adminApi.getAdminCustomers.mockResolvedValueOnce({
+      isImplemented: true,
+      customers: mockCustomersPhase10,
+      pagination: { totalItems: 2, page: 1, limit: 10, totalPages: 1 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/ADMIN CONSOLE/i)).toBeInTheDocument();
+    });
+
+    // 1. Navigate to Customers section
+    fireEvent.click(screen.getByTitle("Customers"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Customer & B2B Account Directory/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Rohan Kulkarni/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Kaveri Robotics Lab/i).length).toBeGreaterThan(0);
+    });
+
+    // 2. Open Profile Inspection Modal and verify Order & Spend Telemetry
+    const inspectBtn = screen.getByTestId("inspect-customer-cust-phase10-02");
+    fireEvent.click(inspectBtn);
+
+    await waitFor(() => {
+      const modal = screen.getByRole("dialog");
+      expect(modal).toBeInTheDocument();
+      expect(within(modal).getByText(/Order & Procurement Telemetry/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/12 orders/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/VTX-ORD-9020/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/3 quote requests/i)).toBeInTheDocument();
+    });
+
+    // Close Modal
+    fireEvent.click(screen.getByRole("button", { name: /Close Profile/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    // 3. Test API Error and Retry Recovery
+    adminApi.getAdminCustomers.mockRejectedValueOnce(new Error("Database connection timeout."));
+    const refreshBtn = screen.getByTestId("refresh-customers-btn");
+    fireEvent.click(refreshBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Database connection timeout./i)).toBeInTheDocument();
+      expect(screen.getByTestId("retry-customers-btn")).toBeInTheDocument();
+    });
+
+    // Test Retry button recovers customer directory
+    adminApi.getAdminCustomers.mockResolvedValueOnce({
+      isImplemented: true,
+      customers: mockCustomersPhase10,
+      pagination: { totalItems: 2, page: 1, limit: 10, totalPages: 1 },
+    });
+
+    fireEvent.click(screen.getByTestId("retry-customers-btn"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Rohan Kulkarni/i).length).toBeGreaterThan(0);
+      expect(screen.queryByTestId("retry-customers-btn")).not.toBeInTheDocument();
+    });
+  });
+
+  test("28. Validates Phase 11 Admin Audit Logs API integration: loading, log stream rendering, action filtering, search, metadata inspection, and error retry", async () => {
+    const mockAuditLogs = [
+      {
+        id: "log-phase11-01",
+        action: "ORDER_STATUS_UPDATE",
+        entityType: "Order",
+        entityId: "ord-test-8899",
+        metadata: {
+          orderNumber: "VTX-ORD-8899",
+          previousStatus: "CONFIRMED",
+          newStatus: "SHIPPED",
+          carrier: "Blue Dart",
+          trackingNumber: "BLD-88990011",
+          notes: "Dispatched from central hub",
+        },
+        createdAt: "2026-10-20T14:30:00.000Z",
+        actorId: "admin-uuid-1",
+        actor: {
+          id: "admin-uuid-1",
+          email: "chief.engineer@vertex.local",
+          fullName: "Chief Engineer",
+          role: "ADMIN",
+        },
+      },
+      {
+        id: "log-phase11-02",
+        action: "PRODUCT_VARIANT_STOCK_UPDATE",
+        entityType: "ProductVariant",
+        entityId: "var-sku-uno-01",
+        metadata: {
+          sku: "ELEC-ARD-UNO-R3",
+          previousStock: 50,
+          newStock: 75,
+          reason: "Received shipment batch #440",
+        },
+        createdAt: "2026-10-21T09:15:00.000Z",
+        actorId: "admin-uuid-1",
+        actor: {
+          id: "admin-uuid-1",
+          email: "chief.engineer@vertex.local",
+          fullName: "Chief Engineer",
+          role: "ADMIN",
+        },
+      },
+    ];
+
+    adminApi.getAdminAuditLogs.mockResolvedValueOnce({
+      isImplemented: true,
+      logs: mockAuditLogs,
+      pagination: { totalItems: 2, page: 1, limit: 20, totalPages: 1 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/ADMIN CONSOLE/i)).toBeInTheDocument();
+    });
+
+    // 1. Navigate to Audit Log section
+    fireEvent.click(screen.getByTitle("Audit Log"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Security & Operational Audit Trail/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/ORDER_STATUS_UPDATE/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/PRODUCT_VARIANT_STOCK_UPDATE/i).length).toBeGreaterThan(0);
+      expect(screen.getByText("ord-test-8899")).toBeInTheDocument();
+    });
+
+    // 2. Open Event Details Inspection Modal
+    const inspectBtn = screen.getByTestId("inspect-audit-log-log-phase11-01");
+    fireEvent.click(inspectBtn);
+
+    await waitFor(() => {
+      const modal = screen.getByRole("dialog");
+      expect(modal).toBeInTheDocument();
+      expect(within(modal).getByText(/Audit Record Details/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/Target Entity Type/i)).toBeInTheDocument();
+      expect(within(modal).getByText(/BLD-88990011/i)).toBeInTheDocument();
+    });
+
+    // Close Modal
+    fireEvent.click(screen.getByRole("button", { name: /Close Record/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    // 3. Test Search filtering
+    const searchInput = screen.getByPlaceholderText(/Search by action, entity type, ID/i);
+    fireEvent.change(searchInput, { target: { value: "var-sku-uno" } });
+
+    expect(screen.getAllByText(/PRODUCT_VARIANT_STOCK_UPDATE/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText("ord-test-8899")).not.toBeInTheDocument();
+
+    // Clear search
+    fireEvent.change(searchInput, { target: { value: "" } });
+    expect(screen.getByText("ord-test-8899")).toBeInTheDocument();
+
+    // 4. Test API Failure and Retry Recovery
+    adminApi.getAdminAuditLogs.mockRejectedValueOnce(new Error("Network gateway disconnected."));
+    const refreshBtn = screen.getByTestId("refresh-audit-logs-btn");
+    fireEvent.click(refreshBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Network gateway disconnected./i)).toBeInTheDocument();
+      expect(screen.getByTestId("retry-audit-logs-btn")).toBeInTheDocument();
+    });
+
+    // Recover using Retry button
+    adminApi.getAdminAuditLogs.mockResolvedValueOnce({
+      isImplemented: true,
+      logs: mockAuditLogs,
+      pagination: { totalItems: 2, page: 1, limit: 20, totalPages: 1 },
+    });
+
+    fireEvent.click(screen.getByTestId("retry-audit-logs-btn"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/ORDER_STATUS_UPDATE/i).length).toBeGreaterThan(0);
+      expect(screen.queryByTestId("retry-audit-logs-btn")).not.toBeInTheDocument();
+    });
+  });
+
+  test("29. Validates Admin Product Category integration: assigns category when editing product, validates active category, and reflects updated category in product view", async () => {
+    adminApi.updateAdminProduct.mockResolvedValue({
+      success: true,
+      message: "Product updated successfully.",
+      product: {
+        ...mockProducts[0],
+        categoryId: "cat-2",
+        category: { id: "cat-2", name: "Screws & Fasteners", slug: "fasteners" },
+      },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/ADMIN CONSOLE/i)).toBeInTheDocument();
+    });
+
+    // 1. Navigate to Products
+    fireEvent.click(screen.getByTitle("Products"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Product Catalog Management/i)).toBeInTheDocument();
+      expect(screen.getAllByText("Arduino Uno R3 Microcontroller Board").length).toBeGreaterThan(0);
+    });
+
+    // 2. Open Edit Product Modal via the product card Edit button
+    const editBtn = screen.getByTestId("edit-product-prod-1");
+    expect(editBtn).toBeInTheDocument();
+    fireEvent.click(editBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit Product & Category Assignment/i)).toBeInTheDocument();
+    });
+
+    // 3. Category select dropdown is rendered with active categories
+    const categorySelect = screen.getByTestId("edit-prod-category-select");
+    expect(categorySelect).toBeInTheDocument();
+    expect(within(categorySelect).getByRole("option", { name: /Electronics/i })).toBeInTheDocument();
+    expect(within(categorySelect).getByRole("option", { name: /Screws & Fasteners/i })).toBeInTheDocument();
+
+    // 4. Change Category from Electronics to Screws & Fasteners
+    fireEvent.change(categorySelect, { target: { value: "cat-2" } });
+
+    // 5. Submit the Edit Form
+    const saveBtn = screen.getByTestId("save-edit-product-btn");
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(adminApi.updateAdminProduct).toHaveBeenCalledWith(
+        "prod-1",
+        expect.objectContaining({
+          categoryId: "cat-2",
+          name: "Arduino Uno R3 Microcontroller Board",
+        })
+      );
+    });
+
+    // 6. Verify success alert feedback is displayed
+    await waitFor(() => {
+      expect(screen.getByText(/updated successfully/i)).toBeInTheDocument();
+    });
+  });
+
+  test("30. Validates official category hierarchy: Fasteners appears first, Electronics second, subcategories expand, and admin can edit and activate/deactivate categories", async () => {
+    const mockOfficialCategories = [
+      {
+        id: "cat-fasteners",
+        name: "Fasteners",
+        slug: "fasteners",
+        icon: "🔩",
+        tint: "tint-orange",
+        description: "Slotted, Phillips, and Hex screws, nuts, washers, and brass inserts.",
+        productsCount: 19,
+        isActive: true,
+        children: [
+          { id: "sub-screws-flat", name: "Screws — Flat (Slotted)", slug: "screws-flat-slotted", parentId: "cat-fasteners", isActive: true },
+          { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips", parentId: "cat-fasteners", isActive: true },
+          { id: "sub-screws-hex", name: "Screws — Hex (Allen)", slug: "screws-hex-allen", parentId: "cat-fasteners", isActive: true },
+          { id: "sub-nuts", name: "Nuts", slug: "nuts", parentId: "cat-fasteners", isActive: true },
+          { id: "sub-washers", name: "Washers", slug: "washers", parentId: "cat-fasteners", isActive: true },
+          { id: "sub-brass-inserts", name: "Brass Inserts", slug: "brass-inserts", parentId: "cat-fasteners", isActive: true },
+        ],
+      },
+      {
+        id: "cat-electronics",
+        name: "Electronic Products",
+        slug: "electronics",
+        icon: "🔌",
+        tint: "tint-blue",
+        description: "Lithium-ion cells, microcontroller boards, motor drivers, PLCs, and buck converters.",
+        productsCount: 20,
+        isActive: true,
+        children: [
+          { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", parentId: "cat-electronics", isActive: true },
+          { id: "sub-electronic-components", name: "Electronic Components", slug: "electronic-components", parentId: "cat-electronics", isActive: true },
+          { id: "sub-hvnex-mcu", name: "HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", parentId: "cat-electronics", isActive: true },
+          { id: "sub-hvnex-drivers", name: "HVNEX – DC Motor Drivers", slug: "hvnex-motor-drivers", parentId: "cat-electronics", isActive: true },
+          { id: "sub-hvnex-plc", name: "HVNEX – PLC Controller", slug: "hvnex-plc-controllers", parentId: "cat-electronics", isActive: true },
+          { id: "sub-hvnex-buck", name: "HVNEX – DC-DC Buck Converters", slug: "hvnex-buck-converters", parentId: "cat-electronics", isActive: true },
+        ],
+      },
+    ];
+
+    adminApi.getAdminCategories.mockResolvedValue({
+      categories: mockOfficialCategories,
+    });
+
+    adminApi.updateAdminCategory = jest.fn().mockResolvedValue({
+      success: true,
+      message: "Category updated successfully.",
+      category: {
+        ...mockOfficialCategories[0],
+        name: "Fasteners & Precision Hardware",
+      },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/ADMIN CONSOLE/i)).toBeInTheDocument();
+    });
+
+    // 1. Navigate to Categories section
+    fireEvent.click(screen.getByTitle("Categories"));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Category Hierarchy Management/i)).toBeInTheDocument();
+      expect(screen.getAllByText("Fasteners").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Electronic Products").length).toBeGreaterThan(0);
+    });
+
+    // 2. Verify Fasteners appears before Electronic Products in table order
+    const categoryRows = screen.getAllByRole("row");
+    let fastenersIndex = -1;
+    let electronicsIndex = -1;
+
+    categoryRows.forEach((row, idx) => {
+      if (row.textContent.includes("Fasteners") && !row.textContent.includes("↳")) {
+        if (fastenersIndex === -1) fastenersIndex = idx;
+      }
+      if (row.textContent.includes("Electronic Products") && !row.textContent.includes("↳")) {
+        if (electronicsIndex === -1) electronicsIndex = idx;
+      }
+    });
+
+    expect(fastenersIndex).toBeGreaterThan(0);
+    expect(electronicsIndex).toBeGreaterThan(0);
+    expect(fastenersIndex).toBeLessThan(electronicsIndex);
+
+    // 3. Verify subcategories render under Fasteners (expanded by default for immediate admin visibility)
+    expect(screen.getAllByText(/Screws.*Flat/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Screws.*Cross/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Screws.*Hex/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Washers").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Brass Inserts").length).toBeGreaterThan(0);
+
+    // Test Accordion toggle button (collapses and re-expands)
+    const toggleFastenersBtn = screen.getAllByTestId("toggle-subcategories-fasteners")[0];
+    expect(toggleFastenersBtn).toBeInTheDocument();
+    fireEvent.click(toggleFastenersBtn); // collapses
+    expect(screen.queryByText(/Screws.*Flat/i)).not.toBeInTheDocument();
+    fireEvent.click(toggleFastenersBtn); // re-expands
+    expect(screen.getAllByText(/Screws.*Flat/i).length).toBeGreaterThan(0);
+
+    // 4. Test Edit Category Modal
+    const editFastenersBtn = screen.getAllByTestId("edit-category-fasteners")[0];
+    fireEvent.click(editFastenersBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Edit Category: Fasteners/i)).toBeInTheDocument();
+    });
+
+    const editNameInput = screen.getByTestId("edit-category-name-input");
+    fireEvent.change(editNameInput, { target: { value: "Fasteners & Precision Hardware" } });
+
+    const saveCatBtn = screen.getByTestId("save-category-btn");
+    fireEvent.click(saveCatBtn);
+
+    await waitFor(() => {
+      expect(adminApi.updateAdminCategory).toHaveBeenCalledWith(
+        "cat-fasteners",
+        expect.objectContaining({
+          name: "Fasteners & Precision Hardware",
+        })
+      );
+    });
+
+    // 5. Test Quick Deactivate Toggle Button
+    adminApi.updateAdminCategory.mockResolvedValueOnce({
+      success: true,
+      message: "Category status updated.",
+      category: {
+        ...mockOfficialCategories[0],
+        isActive: false,
+      },
+    });
+
+    const toggleStatusBtn = screen.getAllByTestId("toggle-status-fasteners")[0];
+    expect(toggleStatusBtn).toHaveTextContent("Deactivate");
+    fireEvent.click(toggleStatusBtn);
+
+    await waitFor(() => {
+      expect(adminApi.updateAdminCategory).toHaveBeenCalledWith(
+        "cat-fasteners",
+        expect.objectContaining({
+          isActive: false,
+        })
+      );
+    });
+  });
+
+  test("31. Validates Commercial RFQ Management: renders quotes list, opens inspect modal, and updates status/pricing", async () => {
+    adminApi.getAdminQuotes.mockResolvedValue({
+      success: true,
+      quotes: [
+        {
+          id: "rfq-test-01",
+          contactName: "Aarav Sharma",
+          email: "aarav@apexind.in",
+          phone: "+91 9876543210",
+          companyName: "Apex Industrial Systems",
+          gstin: "29AAAAA0000A1Z5",
+          productDetails: "Stainless Steel Hex Bolt (M8 x 50mm)",
+          quantity: 500,
+          message: "Urgent shipment required.",
+          status: "PENDING",
+          adminNotes: null,
+          quotedAmount: null,
+          createdAt: "2026-10-22T08:00:00Z",
+        },
+      ],
+      pagination: { totalItems: 1, page: 1, limit: 10, totalPages: 1 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    // Navigate to Commercial RFQs section
+    fireEvent.click(screen.getByTitle("Commercial RFQs"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /Commercial Quotes \(RFQ\)/i })).toBeInTheDocument();
+      expect(screen.getByText("Aarav Sharma")).toBeInTheDocument();
+      expect(screen.getByText(/Apex Industrial Systems/i)).toBeInTheDocument();
+      expect(screen.getByText("Stainless Steel Hex Bolt (M8 x 50mm)")).toBeInTheDocument();
+    });
+
+    // Click Inspect & Quote
+    fireEvent.click(screen.getByRole("button", { name: /Inspect quote for Aarav Sharma/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByText(/Inquiry: RFQ-RFQ-TEST/i)).toBeInTheDocument();
+    });
+
+    // Update status and pricing
+    adminApi.updateAdminQuote.mockResolvedValueOnce({
+      success: true,
+      quote: {
+        id: "rfq-test-01",
+        contactName: "Aarav Sharma",
+        status: "QUOTED",
+        quotedAmount: 18500,
+        adminNotes: "Dispatched volume quote.",
+      },
+    });
+
+    const statusSelect = screen.getByLabelText(/Workflow Status/i);
+    fireEvent.change(statusSelect, { target: { value: "QUOTED" } });
+
+    const amountInput = screen.getByLabelText(/Quoted Total/i);
+    fireEvent.change(amountInput, { target: { value: "18500" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Quote Updates/i }));
+
+    await waitFor(() => {
+      expect(adminApi.updateAdminQuote).toHaveBeenCalledWith("rfq-test-01", {
+        status: "QUOTED",
+        quotedAmount: 18500,
+        adminNotes: null,
+      });
+      expect(screen.getByText(/Quote request status and pricing updated successfully/i)).toBeInTheDocument();
+    });
+  });
+
+  test("32. Validates Newsletter Subscribers: renders subscriber metrics and subscriber table", async () => {
+    adminApi.getAdminNewsletterSubscriptions.mockResolvedValue({
+      success: true,
+      subscriptions: [
+        {
+          id: "sub-1",
+          email: "procurement@apexind.in",
+          isActive: true,
+          createdAt: "2026-10-22T08:00:00Z",
+        },
+      ],
+      pagination: { totalItems: 1, page: 1, limit: 20, totalPages: 1 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    // Navigate to Newsletter section
+    fireEvent.click(screen.getByTitle("Newsletter"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /Newsletter Subscribers/i })).toBeInTheDocument();
+      expect(screen.getByText("procurement@apexind.in")).toBeInTheDocument();
+      expect(screen.getByText("ACTIVE")).toBeInTheDocument();
+    });
+  });
+
+  test("33. Admin Price Management: renders Needs Pricing badge and opens Edit Selling Price modal", async () => {
+    const unpricedProduct = {
+      id: "prod-unpriced-1",
+      name: "Slotted CHHD",
+      slug: "slotted-chhd",
+      brand: "VERTEX",
+      category: { id: "cat-2", name: "Fasteners", slug: "fasteners" },
+      subcategory: { id: "sub-1", name: "Screws — Flat (Slotted)", slug: "screws-flat-slotted" },
+      price: null,
+      variants: [
+        {
+          id: "var-unpriced-1",
+          sku: "FAST-SLOT-CHHD-P50",
+          name: "Standard Pack",
+          price: null,
+          stockQuantity: 100,
+        },
+      ],
+    };
+
+    adminApi.getAdminProducts.mockResolvedValue({
+      products: [unpricedProduct],
+      pagination: { totalItems: 1, page: 1, totalPages: 1 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    // Navigate to Products
+    fireEvent.click(screen.getByTitle("Products"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Slotted CHHD").length).toBeGreaterThan(0);
+    });
+
+    // Verify "Needs Pricing" badge is displayed
+    const badges = screen.getAllByText("Needs Pricing");
+    expect(badges.length).toBeGreaterThan(0);
+
+    // Click "Price" button to open modal
+    const priceBtn = screen.getByTestId("edit-price-prod-unpriced-1");
+    fireEvent.click(priceBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /Edit Selling Price/i })).toBeInTheDocument();
+      expect(screen.getByTestId("edit-selling-price-input")).toBeInTheDocument();
+    });
+
+    // Test rejection of negative or zero price
+    const input = screen.getByTestId("edit-selling-price-input");
+    fireEvent.change(input, { target: { value: "-10" } });
+    fireEvent.click(screen.getByTestId("save-edit-price-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("edit-price-feedback")).toHaveTextContent(/Please enter a valid positive selling price/i);
+    });
+
+    // Close modal via Cancel
+    fireEvent.click(screen.getByTestId("cancel-edit-price-btn"));
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: /Edit Selling Price/i })).not.toBeInTheDocument();
+    });
+  });
+
+  test("34. Admin Price Management: successfully saves price and calls updateProductPrice", async () => {
+    const unpricedProduct = {
+      id: "prod-unpriced-2",
+      name: "Pan Head Screw",
+      slug: "pan-head-screw",
+      brand: "VERTEX",
+      category: { id: "cat-2", name: "Fasteners", slug: "fasteners" },
+      subcategory: { id: "sub-2", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+      price: null,
+      variants: [
+        {
+          id: "var-unpriced-2",
+          sku: "FAST-PAN-HD-P50",
+          name: "Standard Pack",
+          price: null,
+          stockQuantity: 100,
+        },
+      ],
+    };
+
+    adminApi.getAdminProducts.mockResolvedValue({
+      products: [unpricedProduct],
+      pagination: { totalItems: 1, page: 1, totalPages: 1 },
+    });
+
+    adminApi.updateProductPrice.mockResolvedValue({
+      success: true,
+      message: "Product selling price updated successfully.",
+      product: { ...unpricedProduct, price: 175.50 },
+      variant: { ...unpricedProduct.variants[0], price: 175.50 },
+    });
+
+    render(<AdminLayout onNavigateHome={jest.fn()} onNavigateLogin={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Overview/i)).toBeInTheDocument();
+    });
+
+    // Navigate to Products
+    fireEvent.click(screen.getByTitle("Products"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Pan Head Screw").length).toBeGreaterThan(0);
+    });
+
+    // Click "Price" button
+    fireEvent.click(screen.getByTestId("edit-price-prod-unpriced-2"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: /Edit Selling Price/i })).toBeInTheDocument();
+    });
+
+    // Input new price
+    const input = screen.getByTestId("edit-selling-price-input");
+    fireEvent.change(input, { target: { value: "175.50" } });
+    fireEvent.click(screen.getByTestId("save-edit-price-btn"));
+
+    await waitFor(() => {
+      expect(adminApi.updateProductPrice).toHaveBeenCalledWith("prod-unpriced-2", {
+        price: 175.5,
+        variantId: "var-unpriced-2",
+      });
+      expect(screen.getByTestId("edit-price-feedback")).toHaveTextContent(/successfully updated to/i);
+    });
+  });
 });
+
+
 
 

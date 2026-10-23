@@ -8,6 +8,7 @@ export default function CheckoutPage({
   onNavigateHome,
   onNavigateLogin,
   onOrderSuccess,
+  onNavigateOrders,
 }) {
   const [addresses, setAddresses] = useState([]);
   const [addressesLoading, setAddressesLoading] = useState(true);
@@ -295,6 +296,17 @@ export default function CheckoutPage({
             >
               Continue Shopping →
             </button>
+            {onNavigateOrders && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onNavigateOrders}
+                data-testid="view-orders-btn"
+                style={{ marginLeft: "12px" }}
+              >
+                View in My Orders →
+              </button>
+            )}
           </div>
         </div>
       </div>

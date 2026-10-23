@@ -21,3 +21,6 @@
 
 ## Needed to complete this file
 Screen recording (load + full scroll + hover on header, cards, hero; mobile menu open/close; add to cart), or DevTools Animations/Performance capture.
+
+## Update from video analysis
+Observed timings, marquee speed (~70 px/s est.), scroll fade-ins and non-sticky header are recorded in [14-video-animation-and-interaction-findings.md](14-video-animation-and-interaction-findings.md). Hover/click/mobile motion is still unknown.

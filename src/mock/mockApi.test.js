@@ -184,12 +184,48 @@ describe("VERTEX Frontend-Only Development Mock Mode Suite", () => {
 
       expect(orderRes.success).toBe(true);
       expect(orderRes.order.orderNumber).toMatch(/^MOCK-\d+$/);
+      expect(orderRes.order.status).toBe("PENDING");
+      expect(orderRes.order.orderStatus).toBe("PENDING");
       expect(orderRes.order.paymentStatus).toContain("Mock Dev Mode");
       expect(orderRes.order.notes).toContain("MOCK DEV MODE");
 
       // 4. Cart should be cleared after order
       const cartAfterOrder = await mockCartApi.getCart();
       expect(cartAfterOrder.cart.itemCount).toBe(0);
+
+      // 5. Customer can list their orders
+      const listRes = await mockOrderApi.getOrders();
+      expect(listRes.success).toBe(true);
+      expect(listRes.orders.some((o) => o.orderNumber === orderRes.order.orderNumber)).toBe(true);
+
+      // 6. Customer can fetch order by id or orderNumber
+      const singleRes = await mockOrderApi.getOrderById(orderRes.order.orderNumber);
+      expect(singleRes.success).toBe(true);
+      expect(singleRes.order.id).toBe(orderRes.order.id);
+
+      // 7. Customer can cancel an eligible PENDING order
+      const cancelRes = await mockOrderApi.cancelOrder(orderRes.order.id, {
+        reason: "Ordered wrong variant by accident",
+      });
+      expect(cancelRes.success).toBe(true);
+      expect(cancelRes.order.status).toBe("CANCELLED");
+      expect(cancelRes.order.orderStatus).toBe("CANCELLED");
+      expect(cancelRes.order.notes).toContain("Ordered wrong variant by accident");
+
+      // 8. Cannot cancel already cancelled order
+      await expect(mockOrderApi.cancelOrder(orderRes.order.id)).rejects.toMatchObject({
+        code: "ORDER_ALREADY_CANCELLED",
+      });
+
+      // 9. Cannot cancel non-cancellable order (e.g. PROCESSING mock-order-1)
+      await expect(mockOrderApi.cancelOrder("mock-order-1")).rejects.toMatchObject({
+        code: "ORDER_NOT_CANCELLABLE",
+      });
+
+      // 10. 404 for non-existent order
+      await expect(mockOrderApi.cancelOrder("UNKNOWN_ORD_9999")).rejects.toMatchObject({
+        code: "ORDER_NOT_FOUND",
+      });
     });
   });
 
@@ -233,5 +269,70 @@ describe("VERTEX Frontend-Only Development Mock Mode Suite", () => {
       expect(auth.user.role).toBe("ADMIN");
       expect(auth.user.email).toBe("admin@vertex.local");
     });
+
+    test("getAdminOrderById retrieves single order by UUID or orderNumber", async () => {
+      const byId = await mockAdminApi.getAdminOrderById("mock-order-1");
+      expect(byId.success).toBe(true);
+      expect(byId.order.id).toBe("mock-order-1");
+      expect(byId.order.orderNumber).toBe("MOCK-100482");
+      expect(byId.order.items.length).toBeGreaterThan(0);
+
+      const byNumber = await mockAdminApi.getAdminOrderById("MOCK-100482");
+      expect(byNumber.success).toBe(true);
+      expect(byNumber.order.id).toBe("mock-order-1");
+    });
+
+    test("getAdminOrderById throws 404 for unknown order identifier", async () => {
+      await expect(mockAdminApi.getAdminOrderById("NON_EXISTENT_ORD")).rejects.toMatchObject({
+        status: 404,
+        code: "ORDER_NOT_FOUND",
+      });
+    });
+
+    test("submitMockQuote submits quote and lists in admin quotes", async () => {
+      const res = await mockAdminApi.submitMockQuote({
+        contactName: "Sunita Rao",
+        email: "sunita@aerotech.in",
+        phone: "+91 9988776655",
+        companyName: "AeroTech Components",
+        productDetails: "Stainless Steel Hex Bolt (M8 x 50mm)",
+        quantity: 250,
+      });
+      expect(res.success).toBe(true);
+      expect(res.quote.contactName).toBe("Sunita Rao");
+
+      const list = await mockAdminApi.getAdminQuotes();
+      expect(list.quotes.some((q) => q.email === "sunita@aerotech.in")).toBe(true);
+
+      const single = await mockAdminApi.getAdminQuoteById(res.quote.id);
+      expect(single.quote.contactName).toBe("Sunita Rao");
+
+      const updated = await mockAdminApi.updateAdminQuote(res.quote.id, {
+        status: "QUOTED",
+        quotedAmount: 18500,
+      });
+      expect(updated.quote.status).toBe("QUOTED");
+      expect(updated.quote.quotedAmount).toBe(18500);
+    });
+
+    test("getAdminNewsletter returns subscriber list", async () => {
+      const subs = await mockAdminApi.getAdminNewsletter();
+      expect(subs.success).toBe(true);
+      expect(subs.subscriptions.length).toBeGreaterThan(0);
+    });
+
+    test("getAdminCustomerDetails returns full customer profile and 404 for unknown", async () => {
+      const details = await mockAdminApi.getAdminCustomerDetails("mock-user-customer-1");
+      expect(details.success).toBe(true);
+      expect(details.customer.email).toBe("customer@vertex.local");
+      expect(details.customer.addresses.length).toBeGreaterThan(0);
+      expect(details.customer.metrics).toBeDefined();
+
+      await expect(mockAdminApi.getAdminCustomerDetails("NON_EXISTENT_CUST")).rejects.toMatchObject({
+        status: 404,
+        code: "CUSTOMER_NOT_FOUND",
+      });
+    });
   });
 });
+

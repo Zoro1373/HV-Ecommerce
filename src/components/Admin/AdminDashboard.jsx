@@ -456,127 +456,64 @@ export default function AdminDashboard({ onNavigateSection, onNavigateStorefront
         </div>
       </div>
 
-      {/* Two Column Grid: Low Stock Alert Items & Operational Activity Feed */}
-      <div className="adm-dashboard-grid-2col">
-        {/* Low Stock Items Table */}
-        <div className="adm-card" style={{ marginBottom: 0 }}>
-          <div className="adm-card-header">
-            <h2 className="adm-card-title">Low Stock Telemetry (&le; 50 Units)</h2>
-            <button
-              type="button"
-              className="adm-btn adm-btn-secondary adm-btn-sm"
-              onClick={() => onNavigateSection("inventory")}
-            >
-              Manage Inventory →
-            </button>
-          </div>
-          <div className="adm-card-body" style={{ padding: 0 }}>
-            {lowStockItems.length === 0 ? (
-              <div style={{ padding: 28, textAlign: "center", color: "var(--adm-text-secondary)" }}>
-                <div style={{ fontSize: "1.8rem", marginBottom: 8 }} aria-hidden="true">✓</div>
-                <strong style={{ display: "block", color: "var(--adm-text-primary)", marginBottom: 4 }}>
-                  Inventory Healthy
-                </strong>
-                All catalog variants are currently well-stocked above threshold.
-              </div>
-            ) : (
-              <div className="adm-table-container" style={{ border: "none" }}>
-                <table className="adm-table">
-                  <thead>
-                    <tr>
-                      <th>Product / Variant</th>
-                      <th>SKU</th>
-                      <th>Available</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lowStockItems.slice(0, 5).map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>{item.productName}</strong>
-                          <div style={{ fontSize: "0.76rem", color: "var(--adm-text-secondary)" }}>
-                            {item.name || item.packSize || "Standard"}
-                          </div>
-                        </td>
-                        <td>
-                          <code>{item.sku}</code>
-                        </td>
-                        <td>
-                          <strong>{item.stockQuantity}</strong> units
-                        </td>
-                        <td>
-                          <span className="adm-badge adm-badge-warning">
-                            Low Stock
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+      {/* Low Stock Items Table */}
+      <div className="adm-card" style={{ marginBottom: 24 }}>
+        <div className="adm-card-header">
+          <h2 className="adm-card-title">Low Stock Telemetry (&le; 50 Units)</h2>
+          <button
+            type="button"
+            className="adm-btn adm-btn-secondary adm-btn-sm"
+            onClick={() => onNavigateSection("inventory")}
+          >
+            Manage Inventory →
+          </button>
         </div>
-
-        {/* Operational Activity Feed */}
-        <div className="adm-card" style={{ marginBottom: 0 }}>
-          <div className="adm-card-header">
-            <h2 className="adm-card-title">Operational Activity Feed</h2>
-            <span className="adm-badge adm-badge-neutral">Audit Telemetry</span>
-          </div>
-          <div className="adm-card-body">
-            <div className="adm-activity-feed">
-              <div className="adm-activity-item">
-                <span
-                  className={`adm-activity-dot ${health?.status === "UP" ? "dot-green" : "dot-orange"}`}
-                  aria-hidden="true"
-                />
-                <div className="adm-activity-content">
-                  <div className="adm-activity-header">
-                    <strong>PostgreSQL Connection {health?.status === "UP" ? "Verified" : "Check Needed"}</strong>
-                    <span className="adm-activity-time">{health?.status === "UP" ? "Health: UP" : "Degraded"}</span>
-                  </div>
-                  <p className="adm-activity-desc">
-                    {health?.status === "UP"
-                      ? "Neon serverless database connection active and verified via /api/health."
-                      : "Database health probe did not report UP status. Verify Neon connectivity."}
-                  </p>
-                </div>
-              </div>
-
-              <div className="adm-activity-item">
-                <span className="adm-activity-dot dot-blue" aria-hidden="true" />
-                <div className="adm-activity-content">
-                  <div className="adm-activity-header">
-                    <strong>Storefront Checkout System</strong>
-                    <span className="adm-activity-time">Phase 3 Verified</span>
-                  </div>
-                  <p className="adm-activity-desc">
-                    Customer checkout service mounted with atomic concurrency locks. Admin order query endpoint is pending backend route integration.
-                  </p>
-                </div>
-              </div>
-
-              <div className="adm-activity-item">
-                <span
-                  className={`adm-activity-dot ${lowStockItems.length > 0 ? "dot-orange" : "dot-green"}`}
-                  aria-hidden="true"
-                />
-                <div className="adm-activity-content">
-                  <div className="adm-activity-header">
-                    <strong>Catalog Stock Telemetry</strong>
-                    <span className="adm-activity-time">{lowStockItems.length > 0 ? "Alert Active" : "Stock Normal"}</span>
-                  </div>
-                  <p className="adm-activity-desc">
-                    {lowStockItems.length > 0
-                      ? `${lowStockItems.length} catalog variant(s) monitored at or below threshold (50 units).`
-                      : "All catalog variants are well-stocked above thresholds."}
-                  </p>
-                </div>
-              </div>
+        <div className="adm-card-body" style={{ padding: 0 }}>
+          {lowStockItems.length === 0 ? (
+            <div style={{ padding: 28, textAlign: "center", color: "var(--adm-text-secondary)" }}>
+              <div style={{ fontSize: "1.8rem", marginBottom: 8 }} aria-hidden="true">✓</div>
+              <strong style={{ display: "block", color: "var(--adm-text-primary)", marginBottom: 4 }}>
+                Inventory Healthy
+              </strong>
+              All catalog variants are currently well-stocked above threshold.
             </div>
-          </div>
+          ) : (
+            <div className="adm-table-container" style={{ border: "none" }}>
+              <table className="adm-table">
+                <thead>
+                  <tr>
+                    <th>Product / Variant</th>
+                    <th>SKU</th>
+                    <th>Available</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStockItems.slice(0, 5).map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.productName}</strong>
+                        <div style={{ fontSize: "0.76rem", color: "var(--adm-text-secondary)" }}>
+                          {item.name || item.packSize || "Standard"}
+                        </div>
+                      </td>
+                      <td>
+                        <code>{item.sku}</code>
+                      </td>
+                      <td>
+                        <strong>{item.stockQuantity}</strong> units
+                      </td>
+                      <td>
+                        <span className="adm-badge adm-badge-warning">
+                          Low Stock
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 

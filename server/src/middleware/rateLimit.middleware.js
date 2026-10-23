@@ -133,4 +133,37 @@ export const mfaEnrollLimiter = rateLimit({
   },
 });
 
+/**
+ * Rate limiter for commercial Request a Quote (RFQ) submissions:
+ * Max 20 submissions per hour per IP.
+ */
+export const quoteLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: (req) => (isTestEnv() ? 1000 : 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json(
+      errorResponse("Too many quote requests submitted. Please wait before submitting again.")
+    );
+  },
+});
+
+/**
+ * Rate limiter for newsletter subscriptions:
+ * Max 30 subscriptions per hour per IP.
+ */
+export const newsletterLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: (req) => (isTestEnv() ? 1000 : 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json(
+      errorResponse("Too many newsletter subscription requests. Please try again later.")
+    );
+  },
+});
+
+
 

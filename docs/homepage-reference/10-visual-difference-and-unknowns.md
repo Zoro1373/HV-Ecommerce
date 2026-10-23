@@ -1,63 +1,47 @@
 # 10 — Visual Differences and Unknowns
 
-**Updated**: Phase 8 Final Validation Complete.
+## Could not be inspected
+| Area | Why |
+|---|---|
+| Rendered appearance, screenshots | No browser access (shell blocked by proxy 403; browser control not on this plan). Only a text/markdown fetch of the page worked. |
+| Computed styles, fonts, colors, spacing | Needs DevTools |
+| Theme CSS/JS, libraries, animation implementation | Not retrievable; platform is Shopify (observed), theme name unknown |
+| Hover, click, focus, scroll, autoplay behavior | Not testable |
+| Tablet/mobile layouts and breakpoints | Not testable |
+| Cart notification, overlays, consent/notification popups | Text only |
+| Reduced-motion behavior | Not testable |
+| VERTEX: `App.css` body, `Products.css`, other components, schema, serializers, test/build results | Not read/run (see [07](07-vertex-codebase-audit.md)) |
 
-## Verification Evidence Captured
-| Artifact | Format | Description | Resolution | Status |
-|---|---|---|---|---|
-| `screenshot_1440.png` | PNG image | Desktop full viewport capture | 1440 × 900 px | Verified |
-| `screenshot_820.png` | PNG image | Tablet viewport capture | 820 × 1024 px | Verified |
-| `screenshot_390.png` | PNG image | Mobile viewport capture | 390 × 844 px | Verified |
-| Jest Test Suite | CLI output | 19 suites, 147 unit & integration tests | All passing (100%) | Verified |
-| Production Build | CLI output | CRA production bundle (`npm run build`) | Exit code 0 | Verified |
+## Uncertain (do not treat as fact)
+Slider/rotation behavior of announcement bar, hero and blog; whether the category block is a grid or carousel; hover image swap on two-image cards; sticky header; mega-menu layout; cards per row.
 
----
+## Known visual differences VERTEX will have today
+- Reference: image-led 41-tile category grid; VERTEX: 3 text/emoji category cards (data-limited).
+- Reference: hero slideshow of full-width banners; VERTEX: single text hero with preview card.
+- Reference: no wishlist/spec chips/SKU on cards; VERTEX cards carry them (keep; compact variant proposed).
+- Reference: reviews, blog, client logos, assorted-pack rails; VERTEX has none of these.
+- Reference header: one-level mega menu of 20+ groups; VERTEX: 10-item flat nav.
 
-## Resolved Unknowns (Previously "Could Not Be Inspected")
-1. **Computed Styles, Fonts, Colors, Spacing**:
-   - The reference site uses dark slate, vibrant orange highlights, and clean typography.
-   - VERTEX successfully implemented this hierarchy using its approved brand tokens (`--navy: #09182d`, `--orange: #f26522`, `--cyan: #1eafdb`, `--surface: #ffffff`, `--bg: #f8fafc`).
-2. **Hero Slideshow and Motion**:
-   - The reference's multi-banner hero behavior was matched with `HeroSlider.jsx`.
-   - Autoplay pauses on mouse enter or keyboard focus, supports left/right keyboard arrow navigation, dot indicators, and mobile touch swiping.
-3. **Category Representation**:
-   - Reference had 41 image-led category tiles.
-   - VERTEX now provides image-led category tiles (`CategoryTiles.jsx`) backed by authentic database categories (Fasteners, Electronics, Nuts, Tools), with high-resolution imagery and fallback initials/emojis when images are missing.
-4. **Header and Mega-Menu**:
-   - Mega-menu (`MegaMenu.jsx`) renders a multi-column dropdown mapping parent categories to real subcategories with quick-filter navigation.
-   - Mobile navigation drawer provides smooth side navigation with nested category expansion.
-5. **Reduced-Motion Behavior**:
-   - Fully implemented and tested via `@media (prefers-reduced-motion: reduce)`. Transitions and animations collapse to `0.001ms`, and slider autoplay is halted immediately.
+## Reference defects not to copy
+Magnets tile heading/link mismatch; displayed vs linked WhatsApp number mismatch; ₹0.00 compare-at price on one card; duplicated nav markup.
 
----
+## Assumptions
+1. "Reproduce as closely as legally possible" means layout/structure/behavior only, not the reference's images, logos, copy or customer reviews.
+2. VERTEX keeps its own branding/palette per `AGENTS.md` unless the owner says otherwise.
+3. Category/product data comes from VERTEX's API, so tile and card counts follow VERTEX data.
 
-## Remaining Intentional Differences Between Reference and VERTEX
+## Questions for you
+1. Should VERTEX adopt the reference's colors/typography, or keep the navy/orange/cyan VERTEX palette and only copy layout?
+2. Which reference sections do you want (reviews, blog, client logos, assorted-pack rails) given VERTEX has no such content yet?
+3. Can category records get image URLs (needs a schema/seed change)?
+4. Is the bulk-inquiry form meant to reuse `QuoteModal`?
+5. Fidelity target: exact visual match or structural match?
 
-These differences are deliberate engineering and brand decisions preserving VERTEX's identity and data integrity:
+## Evidence needed
+- Screenshots (full-page) at ~1440, ~820, ~390 px, plus mega-menu open, mobile drawer open, a product card hover.
+- Screen recording of load + scroll + hero interaction.
+- DevTools exports: computed styles for header, hero, tile, card, button; list of CSS/JS files; `@media` rules.
+- Confirmation of owner/permission for any reference imagery you want to reuse.
 
-1. **Category Tile Count**:
-   - *Reference*: 41 categories (specialized fastener sub-varieties on Shopify).
-   - *VERTEX*: 4 primary database categories with nested subcategories (Fasteners, Electronics, Nuts, Tools). Tiles are driven strictly by the actual catalog API rather than fabricated mock records.
-2. **Branding & Color Identity**:
-   - *Reference*: OnlyScrews brand styling and green/black accents.
-   - *VERTEX*: Industrial B2B engineering palette (Navy `#09182d`, High-Vis Orange `#f26522`, Electric Cyan `#1eafdb`, Slate `#64748b`).
-3. **Hardware Showcase in Hero**:
-   - *Reference*: Generic fastener banner.
-   - *VERTEX*: High-tech engineering dual hero featuring microcontroller lab hardware (Arduino Uno R3) alongside SS304 metric fasteners, reinforcing VERTEX's core electronic + fastener supply mission.
-4. **Omission of Fake Social Proof / Blogs**:
-   - *Reference*: YouTube video embeds, blog posts, and third-party customer reviews carousel.
-   - *VERTEX*: Omitted until genuine customer reviews and blog APIs exist in the backend. Replaced with authentic VERTEX value propositions, certified ISO 9001 compliance badges, and a commercial RFQ Bulk Inquiry CTA.
-5. **Interactive Policy Modals & Floating Support**:
-   - *Reference*: Standard footer links opening separate Shopify pages.
-   - *VERTEX*: Instant, accessible tabbed Policy Modal (`PolicyModal.jsx`) covering Shipping, Cash on Delivery, GST Invoicing, and Returns, plus a 24/7 Floating Support Desk widget (`FloatingSupport.jsx`).
-6. **Product Card Engineering Metadata**:
-   - *Reference*: Minimal pricing without engineering specifications.
-   - *VERTEX*: Product cards feature SKU badges, material tolerance chips (e.g. SS304, Metric M3–M10), real-time stock indicators, and instant Wishlist heart toggles.
-
----
-
-## Reference Defects Specifically Avoided
-- **Duplicate Navigation Markup**: VERTEX uses clean semantic `<nav>` elements without duplicated landmark roles.
-- **Mismatched Category Links**: All VERTEX category tiles link directly to their corresponding slug filters (`/products?category=<slug>`).
-- **Mismatched WhatsApp Contacts**: VERTEX floating support and footer use consistent contact links and mailto handlers.
-- **₹0.00 Compare-at Prices**: VERTEX cards only show discount badges when valid positive MSRP discounts exist.
+## Update after video analysis
+Resolved by the recording: rendered layout, section backgrounds, desktop grid columns, brand colors, announcement/hero control structure, scroll fade-ins, marquee, non-sticky header (see 11–15). Still unresolved: mega-menu, hover states, search, cart notification, mobile/tablet, hero autoplay interval and transition, fonts, form feedback. A second recording list is in [14](14-video-animation-and-interaction-findings.md).

@@ -14,9 +14,9 @@ All entries `[OBSERVED]` from text content unless tagged. Dimensions, spacing an
 | 6 | Trusted by Industry Leaders | 12 client logos |
 | 7 | Shop by category | 41 tiles, each image + h3 link + "Click here" |
 | 8 | Reviews | "Let customers speak for us", "from 1208 reviews", 15 review entries |
-| 9 | Mini Assorted Packs | 9 product cards + View all |
+| 9 | Mini Assorted Packs | 10 product cards + View all (corrected from video) |
 | 10 | Power Tools | 6 product cards + View all |
-| 11 | Assorted Screw Packs ("Popular Picks") | 9 cards, each with 2 images + View all |
+| 11 | Assorted Screw Packs ("Popular Picks") | 10 cards, each with 2 images in source markup + View all (corrected from video) |
 | 12 | New in Bearings | 4 collection tiles (no price) |
 | 13 | Blog posts | 3 posts, "1 / of 3" counter, View all |
 | 14 | Value props | 4 image tiles: Best price, No MOQ, Fast Shipping, Best Quality |

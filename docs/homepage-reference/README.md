@@ -38,3 +38,13 @@ Inspection was done by a text/markdown page fetch only. There was no rendered br
 - DevTools computed styles (fonts, colors, spacing) and the theme's CSS/JS file list.
 - Remaining VERTEX files not yet read (see 07 "Still unverified"), and a baseline `npm test` / `npm run build` run.
 - Legal clearance for any reused imagery, logos and copy (see 06).
+
+## Video-based addendum (screen recording of 2026-10-21)
+Rendered-page evidence from the user's recording supersedes the "unknown" visual items in 03/04/05 where noted:
+| File | Role |
+|---|---|
+| [11-video-analysis-overview-and-timeline.md](11-video-analysis-overview-and-timeline.md) | Recording facts, method, timeline, new findings |
+| [12-video-visual-measurements.md](12-video-visual-measurements.md) | Measured colors, container, grids, components |
+| [13-video-section-spec.md](13-video-section-spec.md) | Section-by-section visual spec with reproduce/verify notes |
+| [14-video-animation-and-interaction-findings.md](14-video-animation-and-interaction-findings.md) | Observed motion with timing and confidence; gaps |
+| [15-video-vs-vertex-gap-and-plan.md](15-video-vs-vertex-gap-and-plan.md) | Gap vs current VERTEX, updated priority, extra tests |

@@ -3,6 +3,7 @@ import {
   getAdminCategories,
   getAdminCategoryDetails,
   createAdminCategory,
+  updateAdminCategory,
 } from "../../services/adminApi";
 
 // Currency Formatter
@@ -20,7 +21,12 @@ export default function AdminCategories() {
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortOrder, setSortOrder] = useState("name_asc");
+  const [sortOrder, setSortOrder] = useState("default");
+
+  // Expanded subcategories per parent category
+  const [expandedCategories, setExpandedCategories] = useState(
+    () => new Set(["cat-fasteners", "cat-electronics", "fasteners", "electronics"])
+  );
 
   // Category inspection modal
   const [selectedCategorySlug, setSelectedCategorySlug] = useState(null);
@@ -31,6 +37,20 @@ export default function AdminCategories() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [modalMessage, setModalMessage] = useState(null);
+
+  // Edit Category modal
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editCategoryForm, setEditCategoryForm] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    icon: "📁",
+    tint: "tint-blue",
+    parentId: "",
+    isActive: true,
+  });
+  const [editModalSubmitting, setEditModalSubmitting] = useState(false);
+  const [editModalMessage, setEditModalMessage] = useState(null);
 
   const [newCategory, setNewCategory] = useState({
     name: "",
@@ -62,7 +82,7 @@ export default function AdminCategories() {
 
   // Prevent background page from scrolling while modal is open
   useEffect(() => {
-    if (isAddModalOpen || selectedCategorySlug) {
+    if (isAddModalOpen || selectedCategorySlug || editingCategory) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -70,7 +90,80 @@ export default function AdminCategories() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isAddModalOpen, selectedCategorySlug]);
+  }, [isAddModalOpen, selectedCategorySlug, editingCategory]);
+
+  const toggleExpandCategory = (catId) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(catId)) {
+        next.delete(catId);
+      } else {
+        next.add(catId);
+      }
+      return next;
+    });
+  };
+
+  const handleOpenEditCategory = (cat, defaultParentId = "") => {
+    setEditingCategory(cat);
+    setEditCategoryForm({
+      name: cat.name || "",
+      slug: cat.slug || "",
+      description: cat.description || "",
+      icon: cat.icon || "📁",
+      tint: cat.tint || "tint-blue",
+      parentId: cat.parentId || defaultParentId || "",
+      isActive: cat.isActive !== false,
+    });
+    setEditModalMessage(null);
+  };
+
+  const handleUpdateCategory = async (e) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    setEditModalMessage(null);
+
+    if (!editCategoryForm.name.trim() || !editCategoryForm.slug.trim()) {
+      setEditModalMessage({
+        type: "error",
+        text: "Please provide both category name and URL slug.",
+      });
+      return;
+    }
+
+    try {
+      setEditModalSubmitting(true);
+      await updateAdminCategory(editingCategory.id, editCategoryForm);
+      setEditModalMessage({
+        type: "success",
+        text: `Category '${editCategoryForm.name}' updated successfully!`,
+      });
+
+      await loadCategories();
+
+      setTimeout(() => {
+        setEditingCategory(null);
+        setEditModalMessage(null);
+      }, 1000);
+    } catch (err) {
+      setEditModalMessage({
+        type: "error",
+        text: err.message || "Failed to update category.",
+      });
+    } finally {
+      setEditModalSubmitting(false);
+    }
+  };
+
+  const handleToggleCategoryStatus = async (cat) => {
+    const nextStatus = cat.isActive === false ? true : false;
+    try {
+      await updateAdminCategory(cat.id, { isActive: nextStatus });
+      await loadCategories();
+    } catch (err) {
+      setError(err.message || "Failed to update category status.");
+    }
+  };
 
   const handleInspectCategory = async (slug) => {
     try {
@@ -132,7 +225,14 @@ export default function AdminCategories() {
     }
   };
 
-  // Resilient multi-criteria filtering & sorting
+  const categoryPriority = {
+    fasteners: 1,
+    "cat-fasteners": 1,
+    electronics: 2,
+    "cat-electronics": 2,
+  };
+
+  // Resilient multi-criteria filtering & sorting (Fasteners 1st, Electronic Products 2nd)
   const filteredCategories = categories
     .filter((c) => {
       // 1. Search Query
@@ -141,18 +241,30 @@ export default function AdminCategories() {
         const nameMatch = (c.name || "").toLowerCase().includes(q);
         const slugMatch = (c.slug || "").toLowerCase().includes(q);
         const descMatch = (c.description || "").toLowerCase().includes(q);
-        if (!nameMatch && !slugMatch && !descMatch) return false;
+        const subcatMatch = c.children?.some(
+          (sub) =>
+            (sub.name || "").toLowerCase().includes(q) ||
+            (sub.slug || "").toLowerCase().includes(q)
+        );
+        if (!nameMatch && !slugMatch && !descMatch && !subcatMatch) return false;
       }
 
       // 2. Product count association filter
       const count = Number(c.productsCount || c._count?.products || 0);
       if (statusFilter === "with_products" && count === 0) return false;
       if (statusFilter === "empty" && count > 0) return false;
+      if (statusFilter === "active" && c.isActive === false) return false;
+      if (statusFilter === "inactive" && c.isActive !== false) return false;
 
       return true;
     })
     .sort((a, b) => {
-      if (sortOrder === "name_asc") return (a.name || "").localeCompare(b.name || "");
+      if (sortOrder === "default" || sortOrder === "name_asc") {
+        const pA = categoryPriority[a.slug?.toLowerCase()] || categoryPriority[a.id] || 99;
+        const pB = categoryPriority[b.slug?.toLowerCase()] || categoryPriority[b.id] || 99;
+        if (pA !== pB) return pA - pB;
+        return (a.name || "").localeCompare(b.name || "");
+      }
       if (sortOrder === "name_desc") return (b.name || "").localeCompare(a.name || "");
       const countA = Number(a.productsCount || a._count?.products || 0);
       const countB = Number(b.productsCount || b._count?.products || 0);
@@ -164,13 +276,13 @@ export default function AdminCategories() {
   const hasActiveFilters = Boolean(
     searchQuery.trim() ||
     statusFilter !== "all" ||
-    sortOrder !== "name_asc"
+    (sortOrder !== "default" && sortOrder !== "name_asc")
   );
 
   const handleClearFilters = () => {
     setSearchQuery("");
     setStatusFilter("all");
-    setSortOrder("name_asc");
+    setSortOrder("default");
   };
 
   // Summary KPI Calculations
@@ -282,6 +394,17 @@ export default function AdminCategories() {
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search categories"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="adm-search-clear-btn"
+              onClick={() => setSearchQuery("")}
+              title="Clear search query"
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
         <div className="adm-filter-group">
@@ -294,6 +417,8 @@ export default function AdminCategories() {
             <option value="all">All Categories ({categories.length})</option>
             <option value="with_products">With Assigned Products</option>
             <option value="empty">Empty Categories (0 Products)</option>
+            <option value="active">Active Categories Only</option>
+            <option value="inactive">Inactive Categories Only</option>
           </select>
 
           <select
@@ -302,6 +427,7 @@ export default function AdminCategories() {
             onChange={(e) => setSortOrder(e.target.value)}
             aria-label="Sort categories"
           >
+            <option value="default">Default (Fasteners 1st, Electronics 2nd)</option>
             <option value="name_asc">Name (A–Z)</option>
             <option value="name_desc">Name (Z–A)</option>
             <option value="products_desc">Products Count: High to Low</option>
@@ -379,80 +505,220 @@ export default function AdminCategories() {
                   <tbody>
                     {filteredCategories.map((cat) => {
                       const prodCount = Number(cat.productsCount || cat._count?.products || 0);
+                      const hasChildren = Boolean(cat.children && cat.children.length > 0);
+                      const isExpanded = expandedCategories.has(cat.id || cat.slug);
+
                       return (
-                        <tr key={cat.id}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div
-                                className={`adm-category-avatar ${cat.tint || "tint-blue"}`}
-                                style={{ width: 34, height: 34, fontSize: "1.1rem", borderRadius: 8 }}
-                              >
-                                {cat.icon || "📁"}
-                              </div>
-                              <div>
-                                <strong style={{ color: "var(--adm-text-primary)", fontSize: "0.88rem" }}>
-                                  {cat.name}
-                                </strong>
-                                {cat.id && (
-                                  <div
-                                    style={{
-                                      fontSize: "0.7rem",
-                                      color: "var(--adm-text-muted)",
-                                      fontFamily: "monospace",
-                                    }}
-                                  >
-                                    ID: {String(cat.id).slice(0, 8)}...
+                        <React.Fragment key={cat.id || cat.slug}>
+                          <tr className={cat.parentId ? "adm-subcat-row" : "adm-parent-cat-row"}>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <div
+                                  className={`adm-category-avatar ${cat.tint || "tint-blue"}`}
+                                  style={{ width: 34, height: 34, fontSize: "1.1rem", borderRadius: 8 }}
+                                >
+                                  {cat.icon || "📁"}
+                                </div>
+                                <div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <strong style={{ color: "var(--adm-text-primary)", fontSize: "0.88rem" }}>
+                                      {cat.name}
+                                    </strong>
+                                    {hasChildren && (
+                                      <button
+                                        type="button"
+                                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                                        style={{ fontSize: "0.68rem", padding: "1px 6px", height: "auto" }}
+                                        onClick={() => toggleExpandCategory(cat.id || cat.slug)}
+                                        data-testid={`toggle-subcategories-${cat.slug}`}
+                                        title={isExpanded ? "Collapse subcategories" : "Expand subcategories"}
+                                      >
+                                        {isExpanded ? `▲ ${cat.children.length} Subcategories` : `▼ ${cat.children.length} Subcategories`}
+                                      </button>
+                                    )}
                                   </div>
-                                )}
+                                  {cat.id && (
+                                    <div
+                                      style={{
+                                        fontSize: "0.7rem",
+                                        color: "var(--adm-text-muted)",
+                                        fontFamily: "monospace",
+                                      }}
+                                    >
+                                      ID: {String(cat.id).slice(0, 8)}...
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td>
-                            <code style={{ fontSize: "0.78rem" }}>/{cat.slug}</code>
-                          </td>
-                          <td style={{ maxWidth: 280 }}>
-                            <span
-                              style={{
-                                fontSize: "0.82rem",
-                                color: "var(--adm-text-secondary)",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                              }}
-                              title={cat.description || "No description"}
-                            >
-                              {cat.description || "No extended category description provided."}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="adm-badge adm-badge-info" style={{ fontWeight: 600 }}>
-                              📦 {prodCount} Product{prodCount !== 1 ? "s" : ""}
-                            </span>
-                          </td>
-                          <td>
-                            <span
-                              className="adm-badge adm-badge-neutral"
-                              style={{ fontSize: "0.72rem" }}
-                            >
-                              {cat.parentId ? "Sub-Category" : "Top-Level"}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="adm-badge adm-badge-success">Active</span>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              className="adm-btn adm-btn-secondary adm-btn-sm"
-                              onClick={() => handleInspectCategory(cat.slug)}
-                              data-testid={`inspect-category-${cat.slug}`}
-                              title={`Inspect products for ${cat.name}`}
-                            >
-                              Inspect Products &rarr;
-                            </button>
-                          </td>
-                        </tr>
+                            </td>
+                            <td>
+                              <code style={{ fontSize: "0.78rem" }}>/{cat.slug}</code>
+                            </td>
+                            <td style={{ maxWidth: 280 }}>
+                              <span
+                                style={{
+                                  fontSize: "0.82rem",
+                                  color: "var(--adm-text-secondary)",
+                                  display: "-webkit-box",
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: "vertical",
+                                  overflow: "hidden",
+                                }}
+                                title={cat.description || "No description"}
+                              >
+                                {cat.description || "No extended category description provided."}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="adm-badge adm-badge-info" style={{ fontWeight: 600 }}>
+                                📦 {prodCount} Product{prodCount !== 1 ? "s" : ""}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className="adm-badge adm-badge-neutral"
+                                style={{ fontSize: "0.72rem" }}
+                              >
+                                {cat.parentId ? "Sub-Category" : "Top-Level"}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`adm-badge ${cat.isActive !== false ? "adm-badge-success" : "adm-badge-neutral"}`}>
+                                {cat.isActive !== false ? "Active" : "Inactive"}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  className="adm-btn adm-btn-secondary adm-btn-sm"
+                                  onClick={() => handleInspectCategory(cat.slug)}
+                                  data-testid={`inspect-category-${cat.slug}`}
+                                  title={`Inspect products for ${cat.name}`}
+                                >
+                                  Inspect Products &rarr;
+                                </button>
+                                <button
+                                  type="button"
+                                  className="adm-btn adm-btn-outline adm-btn-sm"
+                                  onClick={() => handleOpenEditCategory(cat)}
+                                  data-testid={`edit-category-${cat.slug || cat.id}`}
+                                  title={`Edit ${cat.name}`}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="adm-btn adm-btn-outline adm-btn-sm"
+                                  onClick={() => handleToggleCategoryStatus(cat)}
+                                  data-testid={`toggle-status-${cat.slug || cat.id}`}
+                                  title={cat.isActive !== false ? "Deactivate category" : "Activate category"}
+                                >
+                                  {cat.isActive !== false ? "Deactivate" : "Activate"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Nested Subcategories rendered directly under parent */}
+                          {hasChildren && isExpanded &&
+                            cat.children.map((sub) => {
+                              const subCount = Number(sub.productsCount || sub._count?.products || 0);
+                              return (
+                                <tr
+                                  key={sub.id || sub.slug}
+                                  className="adm-subcat-row"
+                                  style={{ backgroundColor: "rgba(240, 244, 248, 0.45)" }}
+                                  data-testid={`subcat-row-${sub.slug}`}
+                                >
+                                  <td style={{ paddingLeft: 42 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <span style={{ color: "var(--adm-text-muted)", fontSize: "0.9rem" }}>↳</span>
+                                      <span
+                                        style={{
+                                          width: 7,
+                                          height: 7,
+                                          borderRadius: "50%",
+                                          backgroundColor: "var(--vtx-accent, #ea580c)",
+                                          display: "inline-block",
+                                        }}
+                                      />
+                                      <div>
+                                        <strong style={{ color: "var(--adm-text-primary)", fontSize: "0.85rem" }}>
+                                          {sub.name}
+                                        </strong>
+                                        {sub.id && (
+                                          <div
+                                            style={{
+                                              fontSize: "0.68rem",
+                                              color: "var(--adm-text-muted)",
+                                              fontFamily: "monospace",
+                                            }}
+                                          >
+                                            ID: {String(sub.id).slice(0, 8)}...
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <code style={{ fontSize: "0.76rem" }}>/{sub.slug}</code>
+                                  </td>
+                                  <td style={{ maxWidth: 280 }}>
+                                    <span style={{ fontSize: "0.8rem", color: "var(--adm-text-secondary)" }}>
+                                      Subcategory under {cat.name}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="adm-badge adm-badge-info" style={{ fontWeight: 600, fontSize: "0.74rem" }}>
+                                      📦 {subCount} Product{subCount !== 1 ? "s" : ""}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="adm-badge adm-badge-neutral" style={{ fontSize: "0.72rem" }}>
+                                      Sub-Category
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className={`adm-badge ${sub.isActive !== false ? "adm-badge-success" : "adm-badge-neutral"}`}>
+                                      {sub.isActive !== false ? "Active" : "Inactive"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                      <button
+                                        type="button"
+                                        className="adm-btn adm-btn-secondary adm-btn-sm"
+                                        onClick={() => handleInspectCategory(sub.slug)}
+                                        data-testid={`inspect-category-${sub.slug}`}
+                                        title={`Inspect products for ${sub.name}`}
+                                      >
+                                        Inspect
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="adm-btn adm-btn-outline adm-btn-sm"
+                                        onClick={() => handleOpenEditCategory(sub, cat.id)}
+                                        data-testid={`edit-category-${sub.slug || sub.id}`}
+                                        title={`Edit ${sub.name}`}
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="adm-btn adm-btn-outline adm-btn-sm"
+                                        onClick={() => handleToggleCategoryStatus(sub)}
+                                        data-testid={`toggle-status-${sub.slug || sub.id}`}
+                                        title={sub.isActive !== false ? "Deactivate subcategory" : "Activate subcategory"}
+                                      >
+                                        {sub.isActive !== false ? "Deactivate" : "Activate"}
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -465,8 +731,11 @@ export default function AdminCategories() {
           <div className="adm-category-mobile-cards">
             {filteredCategories.map((cat) => {
               const prodCount = Number(cat.productsCount || cat._count?.products || 0);
+              const hasChildren = Boolean(cat.children && cat.children.length > 0);
+              const isExpanded = expandedCategories.has(cat.id || cat.slug);
+
               return (
-                <div key={cat.id} className="adm-category-card">
+                <div key={cat.id || cat.slug} className="adm-category-card">
                   <div className="adm-category-card-header">
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div className={`adm-category-avatar ${cat.tint || "tint-blue"}`}>
@@ -479,7 +748,9 @@ export default function AdminCategories() {
                         </code>
                       </div>
                     </div>
-                    <span className="adm-badge adm-badge-success">Active</span>
+                    <span className={`adm-badge ${cat.isActive !== false ? "adm-badge-success" : "adm-badge-neutral"}`}>
+                      {cat.isActive !== false ? "Active" : "Inactive"}
+                    </span>
                   </div>
 
                   <div className="adm-category-card-body">
@@ -491,15 +762,87 @@ export default function AdminCategories() {
                       <span style={{ fontWeight: 600, color: "var(--adm-text-primary)" }}>
                         📦 {prodCount} Product{prodCount !== 1 ? "s" : ""}
                       </span>
-                      <button
-                        type="button"
-                        className="adm-btn adm-btn-secondary adm-btn-sm"
-                        onClick={() => handleInspectCategory(cat.slug)}
-                        title={`Inspect products for ${cat.name}`}
-                      >
-                        Inspect Products &rarr;
-                      </button>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          type="button"
+                          className="adm-btn adm-btn-secondary adm-btn-sm"
+                          onClick={() => handleInspectCategory(cat.slug)}
+                          title={`Inspect products for ${cat.name}`}
+                        >
+                          Inspect Products &rarr;
+                        </button>
+                        <button
+                          type="button"
+                          className="adm-btn adm-btn-outline adm-btn-sm"
+                          onClick={() => handleOpenEditCategory(cat)}
+                          title={`Edit ${cat.name}`}
+                        >
+                          Edit
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Subcategories list in mobile card */}
+                    {hasChildren && (
+                      <div style={{ marginTop: 12, borderTop: "1px solid var(--adm-border)", paddingTop: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--adm-text-secondary)" }}>
+                            Subcategories ({cat.children.length})
+                          </span>
+                          <button
+                            type="button"
+                            className="adm-btn-text"
+                            onClick={() => toggleExpandCategory(cat.id || cat.slug)}
+                            style={{ fontSize: "0.74rem" }}
+                          >
+                            {isExpanded ? "Hide ▲" : "Show ▼"}
+                          </button>
+                        </div>
+                        {isExpanded && (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {cat.children.map((sub) => (
+                              <div
+                                key={sub.id || sub.slug}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "6px 8px",
+                                  background: "var(--adm-surface-alt, #f8fafc)",
+                                  borderRadius: 6,
+                                  fontSize: "0.8rem",
+                                }}
+                              >
+                                <div>
+                                  <strong>↳ {sub.name}</strong>
+                                  <div style={{ fontSize: "0.7rem", color: "var(--adm-text-muted)" }}>
+                                    /{sub.slug} &bull; {Number(sub.productsCount || sub._count?.products || 0)} products
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", gap: 4 }}>
+                                  <button
+                                    type="button"
+                                    className="adm-btn adm-btn-secondary adm-btn-sm"
+                                    onClick={() => handleInspectCategory(sub.slug)}
+                                    style={{ padding: "2px 6px", fontSize: "0.72rem" }}
+                                  >
+                                    Inspect
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="adm-btn adm-btn-outline adm-btn-sm"
+                                    onClick={() => handleOpenEditCategory(sub, cat.id)}
+                                    style={{ padding: "2px 6px", fontSize: "0.72rem" }}
+                                  >
+                                    Edit
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -634,6 +977,142 @@ export default function AdminCategories() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Category Modal */}
+      {editingCategory && (
+        <div className="adm-modal-backdrop" onClick={() => setEditingCategory(null)}>
+          <div
+            className="adm-modal"
+            style={{ maxWidth: 540 }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="edit-cat-title"
+          >
+            <div className="adm-modal-header">
+              <h2 id="edit-cat-title" className="adm-modal-title">
+                Edit Category: {editingCategory.name}
+              </h2>
+              <button
+                type="button"
+                className="adm-modal-close"
+                onClick={() => setEditingCategory(null)}
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleUpdateCategory} className="adm-modal-form">
+              <div className="adm-modal-body">
+                {editModalMessage && (
+                  <div
+                    className={`adm-notice-banner ${
+                      editModalMessage.type === "success"
+                        ? "adm-notice-info"
+                        : "adm-notice-warning"
+                    }`}
+                    role="alert"
+                  >
+                    <span className="adm-notice-icon">
+                      {editModalMessage.type === "success" ? "✓" : "⚠️"}
+                    </span>
+                    <div>{editModalMessage.text}</div>
+                  </div>
+                )}
+
+                <div className="adm-form-group">
+                  <label className="adm-label" htmlFor="edit-cat-name">
+                    Category Name *
+                  </label>
+                  <input
+                    id="edit-cat-name"
+                    type="text"
+                    className="adm-input"
+                    value={editCategoryForm.name}
+                    onChange={(e) => setEditCategoryForm({ ...editCategoryForm, name: e.target.value })}
+                    data-testid="edit-category-name-input"
+                    required
+                  />
+                </div>
+
+                <div className="adm-form-group">
+                  <label className="adm-label" htmlFor="edit-cat-slug">
+                    URL Slug *
+                  </label>
+                  <input
+                    id="edit-cat-slug"
+                    type="text"
+                    className="adm-input"
+                    value={editCategoryForm.slug}
+                    onChange={(e) => setEditCategoryForm({ ...editCategoryForm, slug: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="adm-form-row">
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-cat-icon">
+                      Emoji / Icon
+                    </label>
+                    <input
+                      id="edit-cat-icon"
+                      type="text"
+                      className="adm-input"
+                      value={editCategoryForm.icon}
+                      onChange={(e) => setEditCategoryForm({ ...editCategoryForm, icon: e.target.value })}
+                    />
+                  </div>
+                  <div className="adm-form-group">
+                    <label className="adm-label" htmlFor="edit-cat-status">
+                      Catalog Visibility
+                    </label>
+                    <select
+                      id="edit-cat-status"
+                      className="adm-select"
+                      style={{ width: "100%" }}
+                      value={editCategoryForm.isActive ? "true" : "false"}
+                      onChange={(e) => setEditCategoryForm({ ...editCategoryForm, isActive: e.target.value === "true" })}
+                    >
+                      <option value="true">Active (Visible to Customers)</option>
+                      <option value="false">Inactive (Hidden from Storefront)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="adm-form-group">
+                  <label className="adm-label" htmlFor="edit-cat-desc">
+                    Description
+                  </label>
+                  <textarea
+                    id="edit-cat-desc"
+                    className="adm-textarea"
+                    rows="2"
+                    placeholder="Brief description of products in this category..."
+                    value={editCategoryForm.description}
+                    onChange={(e) => setEditCategoryForm({ ...editCategoryForm, description: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="adm-modal-footer">
+                <button
+                  type="button"
+                  className="adm-btn adm-btn-secondary"
+                  onClick={() => setEditingCategory(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="adm-btn adm-btn-primary"
+                  disabled={editModalSubmitting}
+                  data-testid="save-category-btn"
+                >
+                  {editModalSubmitting ? "Saving..." : "Save Category Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

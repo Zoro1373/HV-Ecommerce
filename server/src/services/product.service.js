@@ -16,13 +16,16 @@ export async function listProducts({
 }) {
   const where = {
     isActive: true,
+    category: {
+      isActive: true,
+    },
   };
 
   // Category filter by slug or ID
   if (category) {
     where.category = {
-      OR: [{ slug: category.toLowerCase() }, { id: category }],
       isActive: true,
+      OR: [{ slug: category.toLowerCase() }, { id: category }],
     };
   }
 
@@ -236,6 +239,9 @@ export async function getProductBySlugOrId(identifier) {
         { id: normalized },
       ],
       isActive: true,
+      category: {
+        isActive: true,
+      },
     },
     include: {
       category: true,

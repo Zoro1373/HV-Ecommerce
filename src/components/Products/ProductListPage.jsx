@@ -193,13 +193,13 @@ export default function ProductListPage({
 
   const availableSubcategories = useMemo(() => {
     if (activeParentCategory?.children && activeParentCategory.children.length > 0) {
-      return activeParentCategory.children;
+      return activeParentCategory.children.filter((sub) => sub.isActive !== false);
     }
     // Collect all subcategories if "all" is selected
     const allSubs = [];
-    categories.forEach((cat) => {
+    categories.filter((cat) => cat.isActive !== false).forEach((cat) => {
       if (cat.children) {
-        cat.children.forEach((sub) => {
+        cat.children.filter((sub) => sub.isActive !== false).forEach((sub) => {
           if (!allSubs.some((s) => s.slug === sub.slug)) {
             allSubs.push(sub);
           }
@@ -234,6 +234,25 @@ export default function ProductListPage({
   const filteredProducts = useMemo(() => {
     let list = [...products];
 
+    // 0. Only active products & products in active categories (Storefront requirement)
+    list = list.filter((p) => p.isActive !== false);
+    if (categories.length > 0) {
+      const activeCategoryIds = new Set(
+        categories.filter((c) => c.isActive !== false).map((c) => c.id)
+      );
+      const activeCategorySlugs = new Set(
+        categories.filter((c) => c.isActive !== false).map((c) => c.slug?.toLowerCase())
+      );
+      list = list.filter((p) => {
+        const catId = p.categoryId || p.category?.id;
+        const catSlug = p.category?.slug?.toLowerCase();
+        if (catId && activeCategoryIds.has(catId)) return true;
+        if (catSlug && activeCategorySlugs.has(catSlug)) return true;
+        if (!catId && !catSlug) return true;
+        return false;
+      });
+    }
+
     // 1. Keyword search (case-insensitive across name, specs, brand, SKU, partNumber)
     if (activeSearch && activeSearch.trim()) {
       const term = activeSearch.trim().toLowerCase();
@@ -252,8 +271,8 @@ export default function ProductListPage({
         );
         const matchSpecs = p.specs
           ? Object.entries(p.specs).some(
-              ([k, v]) => k.toLowerCase().includes(term) || String(v).toLowerCase().includes(term)
-            )
+            ([k, v]) => k.toLowerCase().includes(term) || String(v).toLowerCase().includes(term)
+          )
           : false;
         return matchName || matchDesc || matchBrand || matchTag || matchSubcat || matchSku || matchSpecs;
       });
@@ -372,6 +391,7 @@ export default function ProductListPage({
     inStockOnly,
     selectedSpec,
     sortBy,
+    categories,
   ]);
 
   const handleSearchSubmit = (e) => {
@@ -473,14 +493,14 @@ export default function ProductListPage({
               {selectedSubcat !== "all"
                 ? activeSubcatObj?.name || selectedSubcat
                 : activeParentCategory
-                ? activeParentCategory.name
-                : "Industrial Hardware & Electronics Catalogue"}
+                  ? activeParentCategory.name
+                  : "Industrial Hardware & Electronics Catalogue"}
             </h1>
             <p className="vtx-catalog-sub">
               {isViewingFastenersOrScrews
                 ? "Browse certified precision machine screws, slotted, Phillips cross recess, and hex socket fasteners compliant with DIN, ISO, and IS standards."
                 : activeParentCategory?.description ||
-                  "Browse factory-certified lithium-ion cells, precision machine screws, metric nuts, development microcontrollers, and high-power motor drivers."}
+                "Browse factory-certified lithium-ion cells, precision machine screws, metric nuts, development microcontrollers, and high-power motor drivers."}
             </p>
           </div>
           <div className="vtx-catalog-header-actions">
@@ -513,7 +533,7 @@ export default function ProductListPage({
           >
             <span className="chip-icon">📦</span> All Products
           </button>
-          {categories.map((cat) => (
+          {categories.filter((cat) => cat.isActive !== false).map((cat) => (
             <button
               type="button"
               key={cat.id || cat.slug}

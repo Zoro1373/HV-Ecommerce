@@ -147,12 +147,14 @@ export async function placeOrder({
     id: `mock-order-${Date.now()}`,
     orderNumber: mockOrderNumber,
     userId: "mock-user-customer-1",
-    status: "PROCESSING",
+    status: "PENDING",
+    orderStatus: "PENDING",
     paymentMethod,
     paymentStatus: "PENDING (Mock Dev Mode)",
     subtotal: 1299.0,
     shippingFee: 0.0,
     taxTotal: 233.82,
+    taxAmount: 233.82,
     totalAmount: 1532.82,
     notes: `[MOCK DEV MODE - SIMULATED ORDER] ${notes || ""}`.trim(),
     createdAt: new Date().toISOString(),
@@ -199,3 +201,61 @@ export async function getOrderById(orderIdentifier) {
     order,
   };
 }
+
+export async function cancelOrder(orderIdentifier, { reason } = {}) {
+  await new Promise((r) => setTimeout(r, 50));
+  const orders = getStoredOrders();
+  const orderIndex = orders.findIndex(
+    (o) => o.id === orderIdentifier || o.orderNumber === orderIdentifier
+  );
+
+  if (orderIndex === -1) {
+    const error = new Error(`Order "${orderIdentifier}" not found.`);
+    error.status = 404;
+    error.code = "ORDER_NOT_FOUND";
+    throw error;
+  }
+
+  const order = orders[orderIndex];
+  const currentStatus = order.orderStatus || order.status;
+
+  if (currentStatus === "CANCELLED") {
+    const error = new Error("This order has already been cancelled.");
+    error.status = 400;
+    error.code = "ORDER_ALREADY_CANCELLED";
+    throw error;
+  }
+
+  const CANCELLABLE_STATES = ["PENDING", "CONFIRMED"];
+  if (!CANCELLABLE_STATES.includes(currentStatus)) {
+    const error = new Error(
+      `Cannot cancel order in '${currentStatus}' status. Orders that are processing, shipped, or delivered cannot be cancelled online.`
+    );
+    error.status = 400;
+    error.code = "ORDER_NOT_CANCELLABLE";
+    throw error;
+  }
+
+  const cancellationReason = reason && reason.trim() ? reason.trim() : null;
+  const cancellationNote = cancellationReason
+    ? `${order.notes ? order.notes + " | " : ""}Customer Cancellation: ${cancellationReason}`
+    : order.notes;
+
+  const updatedOrder = {
+    ...order,
+    status: "CANCELLED",
+    orderStatus: "CANCELLED",
+    notes: cancellationNote,
+    updatedAt: new Date().toISOString(),
+  };
+
+  orders[orderIndex] = updatedOrder;
+  saveStoredOrders(orders);
+
+  return {
+    success: true,
+    message: "Order cancelled successfully.",
+    order: updatedOrder,
+  };
+}
+

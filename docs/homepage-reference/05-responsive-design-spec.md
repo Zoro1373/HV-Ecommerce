@@ -28,3 +28,6 @@ No horizontal overflow; images use explicit aspect ratio to prevent layout shift
 
 ## Needed
 Screenshots/recording at ~1440, ~820, ~390 px and DevTools media-query list.
+
+## Update from video analysis
+The recording is desktop only (≈1920 px). Desktop grid columns are in [12-video-visual-measurements.md](12-video-visual-measurements.md): categories 6, packs 5, power tools 6, bearings 4, blog 3, value props 4. Tablet/mobile remain unknown.

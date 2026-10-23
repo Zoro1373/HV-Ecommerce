@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { getAdminCustomers } from "../../services/adminApi";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { getAdminCustomers, getAdminCustomerDetails } from "../../services/adminApi";
 
 export default function AdminCustomers({ currentAdminUser }) {
   const [loading, setLoading] = useState(true);
@@ -9,8 +9,27 @@ export default function AdminCustomers({ currentAdminUser }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [inspectingCustomer, setInspectingCustomer] = useState(null);
+  const requestIdRef = useRef(0);
+
+  const handleInspectCustomer = async (c) => {
+    setInspectingCustomer(c);
+    if (c && c.id) {
+      try {
+        const res = await getAdminCustomerDetails(c.id);
+        if (res && res.customer) {
+          setInspectingCustomer((prev) =>
+            prev && (prev.id === c.id || prev.email === c.email) ? { ...prev, ...res.customer } : prev
+          );
+        }
+      } catch {
+        // Keep existing customer summary without breaking modal
+      }
+    }
+  };
+
 
   const loadCustomers = useCallback(async (isRefresh = false) => {
+    const currentRequestId = ++requestIdRef.current;
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -18,18 +37,24 @@ export default function AdminCustomers({ currentAdminUser }) {
         setLoading(true);
       }
       setError(null);
-      const res = await getAdminCustomers();
-      setCustomersResponse(res);
+      const res = await getAdminCustomers({ limit: 100 });
+      if (currentRequestId === requestIdRef.current) {
+        setCustomersResponse(res);
+      }
     } catch (err) {
-      setError(err.message || "Failed to query customer directory from server.");
-      setCustomersResponse({
-        isImplemented: false,
-        message: err.message,
-        customers: [],
-      });
+      if (currentRequestId === requestIdRef.current) {
+        setError(err.message || "Failed to query customer directory from server.");
+        setCustomersResponse({
+          isImplemented: false,
+          message: err.message,
+          customers: [],
+        });
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (currentRequestId === requestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -124,11 +149,20 @@ export default function AdminCustomers({ currentAdminUser }) {
       </div>
 
       {error && (
-        <div className="adm-notice-banner adm-notice-warning" role="alert">
+        <div className="adm-notice-banner adm-notice-warning" role="alert" style={{ marginBottom: 16 }}>
           <span className="adm-notice-icon">⚠️</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <strong>Directory Notice:</strong> {error}
           </div>
+          <button
+            type="button"
+            className="adm-btn adm-btn-secondary adm-btn-sm"
+            onClick={() => loadCustomers(false)}
+            data-testid="retry-customers-btn"
+            style={{ marginLeft: 8 }}
+          >
+            ↻ Retry
+          </button>
         </div>
       )}
 
@@ -446,7 +480,7 @@ export default function AdminCustomers({ currentAdminUser }) {
                           <button
                             type="button"
                             className="adm-btn adm-btn-secondary adm-btn-sm"
-                            onClick={() => setInspectingCustomer(c)}
+                            onClick={() => handleInspectCustomer(c)}
                             data-testid={`inspect-customer-${c.id || c.email}`}
                           >
                             Inspect Profile
@@ -544,7 +578,7 @@ export default function AdminCustomers({ currentAdminUser }) {
                     <button
                       type="button"
                       className="adm-btn adm-btn-secondary adm-btn-sm"
-                      onClick={() => setInspectingCustomer(c)}
+                      onClick={() => handleInspectCustomer(c)}
                     >
                       Inspect Profile &rarr;
                     </button>
@@ -687,6 +721,46 @@ export default function AdminCustomers({ currentAdminUser }) {
                 </div>
               </div>
 
+              {/* Section 2b: Delivery Addresses (if available) */}
+              {inspectingCustomer.addresses && inspectingCustomer.addresses.length > 0 && (
+                <div className="adm-customer-section">
+                  <h4 className="adm-customer-section-title">
+                    <span>📍</span> Saved Delivery Addresses ({inspectingCustomer.addresses.length})
+                  </h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                    {inspectingCustomer.addresses.map((addr) => (
+                      <div
+                        key={addr.id}
+                        style={{
+                          background: "#f8fafc",
+                          padding: 12,
+                          borderRadius: 6,
+                          border: "1px solid var(--adm-border)",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span>{addr.recipientName}</span>
+                          {addr.isDefault && (
+                            <span className="adm-badge adm-badge-success" style={{ fontSize: "0.65rem", padding: "1px 6px" }}>
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ color: "var(--adm-text-secondary)", lineHeight: 1.4 }}>
+                          {addr.line1}
+                          {addr.line2 ? `, ${addr.line2}` : ""}
+                          <br />
+                          {addr.city}, {addr.state} - {addr.postalCode}
+                          <br />
+                          {addr.country || "India"} • Phone: {addr.phone}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Section 3: Security & Session Telemetry */}
               <div className="adm-customer-section">
                 <h4 className="adm-customer-section-title">
@@ -734,6 +808,48 @@ export default function AdminCustomers({ currentAdminUser }) {
                   </div>
                 </div>
               </div>
+
+              {/* Section 4: Order & Procurement Telemetry */}
+              {(inspectingCustomer.ordersCount !== undefined || inspectingCustomer.totalSpent !== undefined) && (
+                <div className="adm-customer-section">
+                  <h4 className="adm-customer-section-title">
+                    <span>📦</span> Order &amp; Procurement Telemetry
+                  </h4>
+                  <div className="adm-customer-section-grid">
+                    <div className="adm-customer-info-box">
+                      <div className="adm-customer-info-label">Lifetime Orders Placed</div>
+                      <div className="adm-customer-info-val" style={{ fontWeight: 700 }}>
+                        {inspectingCustomer.ordersCount || 0} order{inspectingCustomer.ordersCount !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+
+                    <div className="adm-customer-info-box">
+                      <div className="adm-customer-info-label">Total Spend (Settled)</div>
+                      <div className="adm-customer-info-val" style={{ fontWeight: 700, color: "var(--adm-primary)" }}>
+                        ₹{Number(inspectingCustomer.totalSpent || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+
+                    <div className="adm-customer-info-box">
+                      <div className="adm-customer-info-label">Most Recent Order</div>
+                      <div className="adm-customer-info-val">
+                        {inspectingCustomer.lastOrderNumber ? (
+                          <code>{inspectingCustomer.lastOrderNumber}</code>
+                        ) : (
+                          "No orders recorded"
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="adm-customer-info-box">
+                      <div className="adm-customer-info-label">Wholesale Quotes</div>
+                      <div className="adm-customer-info-val">
+                        {inspectingCustomer.quotesCount || 0} quote request{inspectingCustomer.quotesCount !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Security Shield Callout */}
               <div className="adm-info-callout" style={{ margin: "16px 0 0" }}>

@@ -12,6 +12,8 @@ import { cartRouter } from "./routes/cart.routes.js";
 import { addressRouter } from "./routes/address.routes.js";
 import { orderRouter } from "./routes/order.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
+import { quoteRouter } from "./routes/quote.routes.js";
+import { newsletterRouter } from "./routes/newsletter.routes.js";
 
 import { getTrustedOrigins, getCanonicalOrigin } from "./middleware/auth.middleware.js";
 
@@ -79,6 +81,10 @@ app.use("/api/cart", cartRouter);
 // Customer addresses & checkout order routes
 app.use("/api/addresses", addressRouter);
 app.use("/api/orders", orderRouter);
+
+// Commercial quote requests (RFQ) and newsletter
+app.use("/api/quotes", quoteRouter);
+app.use("/api/newsletter", newsletterRouter);
 
 // Administrative routes
 app.use("/api/admin", adminRouter);

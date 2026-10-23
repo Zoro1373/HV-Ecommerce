@@ -4,6 +4,7 @@ import LoginPage from "./components/Login/LoginPage";
 import AdminLayout from "./components/Admin/AdminLayout";
 import CartDrawer from "./components/Cart/CartDrawer";
 import CheckoutPage from "./components/Checkout/CheckoutPage";
+import OrdersPage from "./components/Orders/OrdersPage";
 import ProductListPage from "./components/Products/ProductListPage";
 import ProductDetailPage from "./components/Products/ProductDetailPage";
 import ProductCard from "./components/Products/ProductCard";
@@ -21,6 +22,7 @@ import FloatingSupport from "./components/Home/FloatingSupport";
 import PolicyModal from "./components/Home/PolicyModal";
 import SiteFooter from "./components/Home/SiteFooter";
 import ScrollReveal from "./components/Common/ScrollReveal";
+import { subscribeNewsletter } from "./services/newsletterApi";
 import { getCurrentUser, logoutUser } from "./services/authApi";
 import { getCategories, getProducts, getProductBySlug } from "./services/catalogApi";
 import {
@@ -59,8 +61,8 @@ const navItems = [
   "Home",
   "Shop Categories",
   "Products",
-  "Electronics",
-  "Screws & Fasteners",
+  "Fasteners",
+  "Electronic Products",
   "Nuts",
   "Bulk Inquiry",
   "Offers",
@@ -160,6 +162,7 @@ export default function App() {
       if (path.startsWith("/admin")) return "admin";
       if (path === "/login") return "login";
       if (path === "/checkout") return "checkout";
+      if (path === "/orders" || path === "/my-orders") return "orders";
       if (path.startsWith("/product/")) return "product-detail";
       if (path === "/products" || path === "/catalog") return "products";
     }
@@ -243,6 +246,8 @@ export default function App() {
   // Newsletter state
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [newsletterError, setNewsletterError] = useState(null);
 
   // Quick Technical Specs Modal state (home specs button fallback)
   const [selectedQuickProduct, setSelectedQuickProduct] = useState(null);
@@ -309,6 +314,8 @@ export default function App() {
         setCurrentView("login");
       } else if (path === "/checkout") {
         setCurrentView("checkout");
+      } else if (path === "/orders" || path === "/my-orders") {
+        setCurrentView("orders");
       } else if (path.startsWith("/product/")) {
         const slug = decodeURIComponent(path.replace("/product/", "").split("/")[0] || "");
         setSelectedProductSlug(slug);
@@ -369,6 +376,21 @@ export default function App() {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  useEffect(() => {
+    const handleCatalogUpdate = () => {
+      loadProducts();
+      if (selectedProductSlug) {
+        getProductBySlug(selectedProductSlug)
+          .then((res) => {
+            if (res?.product) setDetailProduct(res.product);
+          })
+          .catch(() => {});
+      }
+    };
+    window.addEventListener("vertex_catalog_updated", handleCatalogUpdate);
+    return () => window.removeEventListener("vertex_catalog_updated", handleCatalogUpdate);
+  }, [loadProducts, selectedProductSlug]);
 
   // Load Product Detail when in product-detail view
   useEffect(() => {
@@ -467,6 +489,8 @@ export default function App() {
       targetPath = redirectParam ? `/login?redirect=${encodeURIComponent(redirectParam)}` : "/login";
     } else if (view === "checkout") {
       targetPath = "/checkout";
+    } else if (view === "orders") {
+      targetPath = "/orders";
     } else if (view === "admin") {
       setAdminSection(section);
       targetPath = section === "dashboard" ? "/admin" : `/admin/${section}`;
@@ -557,6 +581,8 @@ export default function App() {
       }
     } else if (redirectDestination === "/checkout") {
       navigate("checkout");
+    } else if (redirectDestination === "/orders" || redirectDestination === "/my-orders") {
+      navigate("orders");
     } else {
       navigate("home");
     }
@@ -755,9 +781,19 @@ export default function App() {
     }
   };
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
-    if (email.trim()) setSubscribed(true);
+    if (!email.trim() || subscribing) return;
+    setSubscribing(true);
+    setNewsletterError(null);
+    try {
+      await subscribeNewsletter(email.trim());
+      setSubscribed(true);
+    } catch (err) {
+      setNewsletterError(err.message || "Failed to subscribe. Please try again.");
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   const handleSimulateUser = (role) => {
@@ -908,6 +944,7 @@ export default function App() {
           onNavigateHome={() => navigate("home")}
           onNavigateLogin={(destination) => navigate("login", null, destination || "/checkout")}
           onOrderSuccess={handleOrderSuccess}
+          onNavigateOrders={() => navigate("orders")}
         />
 
         <footer className="footer">
@@ -943,12 +980,36 @@ export default function App() {
       <div className="top-bar">
         <div className="top-bar-inner">
           <div className="top-bar-features">
-            {topBarItems.map((item) => (
-              <span className="top-bar-item" key={item.label}>
-                <span className="top-bar-icon" aria-hidden="true">{item.icon}</span>
-                {item.label}
-              </span>
-            ))}
+            {topBarItems.map((item) => {
+              if (item.label === "Track Order") {
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="top-bar-item top-bar-action-btn"
+                    onClick={() => {
+                      if (currentUser) {
+                        navigate("orders");
+                      } else {
+                        navigate("login", null, "/orders");
+                      }
+                    }}
+                    style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", font: "inherit", padding: 0 }}
+                    title="Track your orders"
+                    data-testid="topbar-track-order-btn"
+                  >
+                    <span className="top-bar-icon" aria-hidden="true">{item.icon}</span>
+                    {item.label}
+                  </button>
+                );
+              }
+              return (
+                <span className="top-bar-item" key={item.label}>
+                  <span className="top-bar-icon" aria-hidden="true">{item.icon}</span>
+                  {item.label}
+                </span>
+              );
+            })}
           </div>
           <div className="top-bar-badge" aria-hidden="true">
             <span>⚡ Certified Hardware &amp; Fasteners</span>
@@ -1026,6 +1087,15 @@ export default function App() {
                     <span className="user-role-badge">{currentUser.role}</span>
                   )}
                 </span>
+                <button
+                  type="button"
+                  className="btn-orders-nav"
+                  onClick={() => navigate("orders")}
+                  title="View your orders"
+                  data-testid="header-my-orders-btn"
+                >
+                  📦 My Orders
+                </button>
                 {currentUser.role === "ADMIN" && (
                   <button
                     type="button"
@@ -1107,12 +1177,12 @@ export default function App() {
                 } else if (item === "Products") {
                   setMegaMenuOpen(false);
                   handleNavigateCatalogWithCategory("all");
-                } else if (item === "Electronics") {
-                  setMegaMenuOpen(false);
-                  handleNavigateCatalogWithCategory("electronics");
-                } else if (item === "Screws & Fasteners") {
+                } else if (item === "Fasteners" || item === "Screws & Fasteners") {
                   setMegaMenuOpen(false);
                   handleNavigateCatalogWithCategory("fasteners");
+                } else if (item === "Electronic Products" || item === "Electronics") {
+                  setMegaMenuOpen(false);
+                  handleNavigateCatalogWithCategory("electronics");
                 } else if (item === "Nuts") {
                   setMegaMenuOpen(false);
                   handleNavigateCatalogWithCategory("nuts");
@@ -1146,8 +1216,8 @@ export default function App() {
                 (item === "Home" && currentView === "home" && selectedCategory === "all" && !isOffersOnly) ||
                 (item === "Shop Categories" && megaMenuOpen) ||
                 (item === "Products" && currentView === "products" && selectedCatalogCategory === "all") ||
-                (item === "Electronics" && (selectedCategory === "electronics" || selectedCatalogCategory === "electronics")) ||
-                (item === "Screws & Fasteners" && (selectedCategory === "fasteners" || selectedCatalogCategory === "fasteners")) ||
+                ((item === "Fasteners" || item === "Screws & Fasteners") && (selectedCategory === "fasteners" || selectedCatalogCategory === "fasteners")) ||
+                ((item === "Electronic Products" || item === "Electronics") && (selectedCategory === "electronics" || selectedCatalogCategory === "electronics")) ||
                 (item === "Nuts" && (selectedCategory === "nuts" || selectedCatalogCategory === "nuts")) ||
                 (item === "Offers" && isOffersOnly);
 
@@ -1339,6 +1409,18 @@ export default function App() {
                     <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--text-dark)" }}>
                       👤 Signed in as {currentUser.fullName || currentUser.email}
                     </div>
+                    <button
+                      type="button"
+                      className="btn-orders-nav"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        navigate("orders");
+                      }}
+                      style={{ width: "100%", justifyContent: "center", padding: "8px" }}
+                      data-testid="mobile-my-orders-btn"
+                    >
+                      📦 My Orders
+                    </button>
                     {currentUser.role === "ADMIN" && (
                       <button
                         type="button"
@@ -1395,6 +1477,55 @@ export default function App() {
       onOpenPolicy={(policyId) => setActivePolicyModal(policyId)}
     />
   );
+
+  // 3.5 DEDICATED CUSTOMER ORDERS VIEW
+  if (currentView === "orders") {
+    return (
+      <div className="page">
+        <MockDevBanner
+          currentUser={currentUser}
+          currentView={currentView}
+          onSimulateUser={handleSimulateUser}
+          onToggleMock={handleToggleMockMode}
+          onNavigate={navigate}
+        />
+        {renderSharedHeader()}
+
+        <main className="main-content">
+          <OrdersPage
+            currentUser={currentUser}
+            onNavigateHome={() => navigate("home")}
+            onNavigateLogin={(dest) => navigate("login", null, dest || "/orders")}
+          />
+        </main>
+
+        {renderSharedFooter()}
+
+        <CartDrawer
+          isOpen={cartOpen}
+          onClose={() => setCartOpen(false)}
+          cart={cart}
+          loading={cartLoading}
+          pendingAction={pendingCartAction}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onClearCart={handleClearCart}
+          cartError={cartError}
+          onClearError={() => setCartError(null)}
+          onNavigateLogin={() => navigate("login", null, "/orders")}
+          onProceedToCheckout={handleProceedToCheckout}
+          currentUser={currentUser}
+        />
+
+        <WishlistDrawer
+          isOpen={wishlistOpen}
+          onClose={() => setWishlistOpen(false)}
+          onAddToCart={handleAddToCart}
+          onViewDetails={handleOpenProductDetail}
+        />
+      </div>
+    );
+  }
 
   // 4. DEDICATED PRODUCTS CATALOGUE VIEW
   if (currentView === "products") {
@@ -1530,12 +1661,12 @@ export default function App() {
 
   // 6. DEFAULT STOREFRONT HOME VIEW
   const categoryTabs = categories.length > 0
-    ? categories.map((c) => ({ key: c.slug, label: c.name }))
+    ? categories.filter((c) => c.isActive !== false).map((c) => ({ key: c.slug, label: c.name }))
     : [
-        { key: "electronics", label: "Electronics" },
-        { key: "fasteners", label: "Fasteners" },
-        { key: "nuts", label: "Nuts" },
-      ];
+      { key: "fasteners", label: "Fasteners" },
+      { key: "electronics", label: "Electronic Products" },
+      { key: "nuts", label: "Nuts" },
+    ];
 
   const filterTabs = [
     { key: "all", label: "All" },
@@ -1543,9 +1674,18 @@ export default function App() {
     { key: "offers", label: "Offers" },
   ];
 
-  const visibleProducts = isOffersOnly
-    ? products.filter((p) => p.tag || (p.mrp && Number(p.mrp) > Number(p.price)))
-    : products;
+  const visibleProducts = products.filter((p) => {
+    // 1. Only active products
+    if (p.isActive === false) return false;
+    // 2. Only products in active categories
+    const cat = categories.find((c) => c.id === p.categoryId || c.slug === p.category?.slug);
+    if (cat && cat.isActive === false) return false;
+    // 3. Offers filter
+    if (isOffersOnly) {
+      return p.tag || (p.mrp && Number(p.mrp) > Number(p.price));
+    }
+    return true;
+  });
 
   const fastenersRailProducts = visibleProducts.filter(
     (p) =>
@@ -1863,6 +2003,11 @@ export default function App() {
               </p>
             ) : (
               <form className="newsletter-form" onSubmit={handleSubscribe}>
+                {newsletterError && (
+                  <div className="newsletter-error" style={{ color: "#ef4444", fontSize: "13px", marginBottom: "8px" }} role="alert">
+                    {newsletterError}
+                  </div>
+                )}
                 <input
                   type="email"
                   placeholder="Enter your work email address"
@@ -1870,9 +2015,10 @@ export default function App() {
                   onChange={(e) => setEmail(e.target.value)}
                   aria-label="Work email address"
                   required
+                  disabled={subscribing}
                 />
-                <button className="btn btn-primary" type="submit">
-                  Subscribe
+                <button className="btn btn-primary" type="submit" disabled={subscribing}>
+                  {subscribing ? "Subscribing..." : "Subscribe"}
                 </button>
               </form>
             )}

@@ -44,3 +44,6 @@ Map these onto VERTEX's existing tokens/Tailwind config once 07 is completed; do
 
 ## Component specs
 Buttons, form fields, cards: `[UNKNOWN]`. Observed only: buttons labelled "Buy Now!", "Click here", "View all", "View cart", "Checkout", "Continue shopping", "Send"; form fields use required markers (*).
+
+## Update from video analysis
+Measured values now exist: see [12-video-visual-measurements.md](12-video-visual-measurements.md) (announcement/dark band `#111111`, hero grey `#e4e4e4`, brand purple ≈ `#6e0cf4`, form band `#252433`, container ≈ 1500–1520 px at 1920). Fonts and exact radii remain `[UNKNOWN]` (DevTools needed).
