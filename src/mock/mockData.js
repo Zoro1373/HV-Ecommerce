@@ -15,6 +15,7 @@
  */
 
 import automationImg from "../assets/hardware/automation.jpg";
+import arduinoImg from "../assets/hardware/arduino.jpg";
 
 // Screws (OnlyScrews-inspired)
 import slottedChhdImg from "../assets/hardware/screws/slotted-chhd.svg";
