@@ -41,19 +41,15 @@ import externalSerratedWasherImg from "../assets/hardware/fasteners/external-ser
 import brassSlantKnurledInsertImg from "../assets/hardware/fasteners/brass-slant-knurled-insert.svg";
 import brassThreadedInsertImg from "../assets/hardware/fasteners/brass-threaded-insert.svg";
 
-// Lithium-Ion Cells & Electronic Components (Robu-inspired)
-import dmegc18650_2600Img from "../assets/hardware/electronics/dmegc-18650-2600.svg";
-import dmegc18650_2900Img from "../assets/hardware/electronics/dmegc-18650-2900.svg";
-import dmegc18650_3200Img from "../assets/hardware/electronics/dmegc-18650-3200.svg";
-import dmegc21700_4500Img from "../assets/hardware/electronics/dmegc-21700-4500.svg";
-import norda21700_4500Img from "../assets/hardware/electronics/norda-21700-4500.svg";
-import panasonic21700_4500Img from "../assets/hardware/electronics/panasonic-21700-4500.svg";
-import norda18650_2600Img from "../assets/hardware/electronics/norda-18650-2600.svg";
-
-import breadboardGl12Img from "../assets/hardware/electronics/breadboard-gl12.svg";
-import jumperCablesImg from "../assets/hardware/electronics/jumper-cables.svg";
-import maleBergStripImg from "../assets/hardware/electronics/male-berg-strip.svg";
-import femaleBergStripImg from "../assets/hardware/electronics/female-berg-strip.svg";
+// Lithium-Ion Cells & Electronic Components (Commercial Photography & Verified Specifications)
+import dmegc18650CellImg from "../assets/hardware/electronics/dmegc-18650-cell.jpg";
+import dmegc21700CellImg from "../assets/hardware/electronics/dmegc-21700-cell.jpg";
+import norda21700CellImg from "../assets/hardware/electronics/norda-21700-cell.webp";
+import norda18650CellImg from "../assets/hardware/electronics/norda-18650-cell.webp";
+import panasonic21700CellImg from "../assets/hardware/electronics/panasonic-21700-cell.jpg";
+import gl12BreadboardImg from "../assets/hardware/electronics/gl12-breadboard.jpg";
+import jumperCablesPhotoImg from "../assets/hardware/electronics/jumper-cables.jpg";
+import bergStripHeadersImg from "../assets/hardware/electronics/berg-strip-headers.jpg";
 
 export const MOCK_CATEGORIES = [
   {
@@ -63,8 +59,8 @@ export const MOCK_CATEGORIES = [
     icon: "🔩",
     tint: "tint-orange",
     description: "Slotted, Phillips, and Hex screws, nuts, washers, and 3D printing brass inserts.",
-    productsCount: 19,
-    isActive: true,
+        productsCount: 20,
+        isActive: true, 7940768 (Update product details and electronics assets)
     children: [
       { id: "sub-screws-flat", name: "Screws — Flat (Slotted)", slug: "screws-flat-slotted", parentId: "cat-fasteners", isActive: true },
       { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips", parentId: "cat-fasteners", isActive: true },
@@ -81,8 +77,12 @@ export const MOCK_CATEGORIES = [
     icon: "🔌",
     tint: "tint-blue",
     description: "Microcontroller boards, DC motor drivers, PLC controller, DC-DC buck converters, lithium-ion cells, and electronic components.",
+<<<<<<< HEAD
     productsCount: 20,
     isActive: true,
+=======
+    productsCount: 22,
+>>>>>>> 7940768 (Update product details and electronics assets)
     children: [
       { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", parentId: "cat-electronics", isActive: true, textOnly: false },
       { id: "sub-electronic-components", name: "Electronic Components", slug: "electronic-components", parentId: "cat-electronics", isActive: true, textOnly: false },
@@ -99,8 +99,12 @@ export const MOCK_CATEGORIES = [
     icon: "⬡",
     tint: "tint-green",
     description: "Hex nuts, Nyloc lock nuts, wing nuts, and serrated flange nuts.",
+<<<<<<< HEAD
     productsCount: 3,
     isActive: true,
+=======
+    productsCount: 4,
+>>>>>>> 7940768 (Update product details and electronics assets)
     children: [
       { id: "sub-nuts", name: "Nuts", slug: "nuts", parentId: "cat-nuts", isActive: true },
     ],
@@ -112,7 +116,7 @@ export const MOCK_CATEGORIES = [
     icon: "⚡",
     tint: "tint-blue",
     description: "Sensors, solid state relays, and prototyping hardware.",
-    productsCount: 2,
+    productsCount: 1,
     children: [],
   },
   {
@@ -579,6 +583,7 @@ export const MOCK_PRODUCTS = [
     slug: "hex-nut",
     description: "Standard industrial hexagon metric full nut for machine bolts, threaded rods, and structural assemblies.",
     categoryId: "cat-fasteners",
+    categoryIds: ["cat-fasteners", "cat-nuts"],
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
     subcategory: { id: "sub-nuts", name: "Nuts", slug: "nuts" },
     brand: "VERTEX",
@@ -616,6 +621,7 @@ export const MOCK_PRODUCTS = [
     slug: "nyloc-nut",
     description: "Nylon insert lock nut that prevents loosening under severe thermal cycling and mechanical vibration without requiring lock washers.",
     categoryId: "cat-fasteners",
+    categoryIds: ["cat-fasteners", "cat-nuts"],
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
     subcategory: { id: "sub-nuts", name: "Nuts", slug: "nuts" },
     brand: "VERTEX",
@@ -655,6 +661,7 @@ export const MOCK_PRODUCTS = [
     slug: "wing-nut",
     description: "Butterfly wing nut designed for frequent manual toolless adjustment, fixture clamping, and quick maintenance access.",
     categoryId: "cat-fasteners",
+    categoryIds: ["cat-fasteners", "cat-nuts"],
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
     subcategory: { id: "sub-nuts", name: "Nuts", slug: "nuts" },
     brand: "VERTEX",
@@ -1266,7 +1273,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc18650_2600Img,
+    imageUrl: dmegc18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1305,7 +1312,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc18650_2900Img,
+    imageUrl: dmegc18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1344,7 +1351,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc18650_3200Img,
+    imageUrl: dmegc18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1383,7 +1390,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc21700_4500Img,
+    imageUrl: dmegc21700CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1420,7 +1427,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "High Capacity",
-    imageUrl: norda21700_4500Img,
+    imageUrl: norda21700CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1457,7 +1464,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "Panasonic Genuine",
-    imageUrl: panasonic21700_4500Img,
+    imageUrl: panasonic21700CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1495,7 +1502,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: norda18650_2600Img,
+    imageUrl: norda18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1535,7 +1542,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8534",
     gstRate: 18.0,
     tag: "Prototyping",
-    imageUrl: breadboardGl12Img,
+    imageUrl: gl12BreadboardImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1572,7 +1579,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8544",
     gstRate: 18.0,
     tag: null,
-    imageUrl: jumperCablesImg,
+    imageUrl: jumperCablesPhotoImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1610,7 +1617,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8536",
     gstRate: 18.0,
     tag: null,
-    imageUrl: maleBergStripImg,
+    imageUrl: bergStripHeadersImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1648,7 +1655,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8536",
     gstRate: 18.0,
     tag: null,
-    imageUrl: femaleBergStripImg,
+    imageUrl: bergStripHeadersImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1797,6 +1804,7 @@ export const MOCK_PRODUCTS = [
     slug: "flanged-hex-nut-m6",
     description: "Zinc-plated serrated flange nuts that distribute clamping load and eliminate the requirement for loose washers.",
     categoryId: "cat-nuts",
+    categoryIds: ["cat-nuts", "cat-fasteners"],
     category: { id: "cat-nuts", name: "Nut Types", slug: "nuts" },
     subcategory: { id: "sub-nuts", name: "4. Nuts", slug: "nuts" },
     brand: "VERTEX",

@@ -38,7 +38,19 @@ function isTextOnlyProduct(product) {
 function isFastenerProduct(product) {
   if (!product) return false;
   const cat = (product.category?.slug || product.categoryId || "").toLowerCase();
-  return cat === "fasteners" || cat === "cat-fasteners" || cat === "nuts" || cat === "cat-nuts";
+  const sub = (product.subcategory?.slug || product.subcategory?.id || "").toLowerCase();
+  return (
+    cat === "fasteners" ||
+    cat === "cat-fasteners" ||
+    cat === "nuts" ||
+    cat === "cat-nuts" ||
+    sub === "nuts" ||
+    sub === "washers" ||
+    sub === "brass-inserts" ||
+    sub.startsWith("screws-") ||
+    product.categoryIds?.includes("cat-fasteners") ||
+    product.categoryIds?.includes("cat-nuts")
+  );
 }
 
 /**
@@ -223,6 +235,8 @@ export default function ProductListPage({
     return (
       selectedCategory === "fasteners" ||
       selectedCategory === "cat-fasteners" ||
+      selectedCategory === "nuts" ||
+      selectedCategory === "cat-nuts" ||
       selectedSubcat.startsWith("screws-") ||
       selectedSubcat === "nuts" ||
       selectedSubcat === "washers" ||
@@ -281,11 +295,22 @@ export default function ProductListPage({
     // 2. Parent Category
     if (selectedCategory && selectedCategory !== "all") {
       const catSlug = selectedCategory.toLowerCase();
-      list = list.filter(
-        (p) =>
+      list = list.filter((p) => {
+        if (catSlug === "nuts" || catSlug === "cat-nuts") {
+          return (
+            p.category?.slug?.toLowerCase() === "nuts" ||
+            p.categoryId?.toLowerCase() === "cat-nuts" ||
+            p.subcategory?.slug?.toLowerCase() === "nuts" ||
+            p.subcategory?.id === "sub-nuts" ||
+            p.categoryIds?.includes("cat-nuts")
+          );
+        }
+        return (
           p.category?.slug?.toLowerCase() === catSlug ||
-          p.categoryId?.toLowerCase() === catSlug
-      );
+          p.categoryId?.toLowerCase() === catSlug ||
+          p.categoryIds?.map((c) => c.toLowerCase()).includes(catSlug)
+        );
+      });
     }
 
     // 3. Subcategory
@@ -1039,8 +1064,12 @@ export default function ProductListPage({
                   <section className="vtx-catalogue-section vtx-fasteners-catalogue-section">
                     <div className="vtx-section-banner">
                       <div className="vtx-section-banner-title">
-                        <span className="vtx-section-num-tag">SECTION 1</span>
-                        <h2>Precision Fasteners & Screws</h2>
+                        <span className="vtx-section-num-tag">
+                          {selectedCategory === "nuts" || selectedCategory === "cat-nuts" ? "CATEGORY 4" : "SECTION 1"}
+                        </span>
+                        <h2>
+                          {selectedCategory === "nuts" || selectedCategory === "cat-nuts" ? "Nut Types & Lock Assemblies" : "Precision Fasteners & Screws"}
+                        </h2>
                       </div>
                       <span className="vtx-section-count-tag">
                         {filteredProducts.filter(isFastenerProduct).length} Products
@@ -1068,8 +1097,20 @@ export default function ProductListPage({
                   <section className="vtx-catalogue-section vtx-electronics-catalogue-section">
                     <div className="vtx-section-banner vtx-section-banner-electronics">
                       <div className="vtx-section-banner-title">
-                        <span className="vtx-section-num-tag">SECTION 2</span>
-                        <h2>Electronic Products & Embedded Systems</h2>
+                        <span className="vtx-section-num-tag">
+                          {selectedCategory === "tools"
+                            ? "TOOLS"
+                            : selectedCategory === "automation"
+                            ? "AUTOMATION"
+                            : "SECTION 2"}
+                        </span>
+                        <h2>
+                          {selectedCategory === "tools"
+                            ? "Precision Engineering Tools"
+                            : selectedCategory === "automation"
+                            ? "Automation & Wiring Components"
+                            : "Electronic Products & Embedded Systems"}
+                        </h2>
                       </div>
                       <span className="vtx-section-count-tag">
                         {filteredProducts.filter((p) => !isFastenerProduct(p)).length} Products

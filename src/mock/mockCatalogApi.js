@@ -30,11 +30,22 @@ export async function getCategoryBySlug(slug) {
     throw error;
   }
 
-  const products = MOCK_PRODUCTS.filter(
-    (p) =>
+  const products = MOCK_PRODUCTS.filter((p) => {
+    if (decoded === "nuts" || decoded === "cat-nuts") {
+      return (
+        p.categoryId === "cat-nuts" ||
+        p.category?.slug?.toLowerCase() === "nuts" ||
+        p.subcategory?.slug?.toLowerCase() === "nuts" ||
+        p.subcategory?.id === "sub-nuts" ||
+        p.categoryIds?.includes("cat-nuts")
+      );
+    }
+    return (
       p.categoryId === category.id ||
-      p.category?.slug?.toLowerCase() === category.slug.toLowerCase()
-  );
+      p.category?.slug?.toLowerCase() === category.slug.toLowerCase() ||
+      p.categoryIds?.includes(category.id)
+    );
+  });
 
   return {
     success: true,
@@ -54,7 +65,7 @@ export async function getProducts({
   inStockOnly = false,
   sort = "newest",
   page = 1,
-  limit = 12,
+  limit = 100,
 } = {}) {
   await new Promise((r) => setTimeout(r, 50));
 
@@ -103,11 +114,22 @@ export async function getProducts({
   // 2. Parent Category filter
   if (category && category.trim() && category !== "all") {
     const cat = category.trim().toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
+    filtered = filtered.filter((p) => {
+      if (cat === "nuts" || cat === "cat-nuts") {
+        return (
+          p.category?.slug?.toLowerCase() === "nuts" ||
+          p.categoryId?.toLowerCase() === "cat-nuts" ||
+          p.subcategory?.slug?.toLowerCase() === "nuts" ||
+          p.subcategory?.id === "sub-nuts" ||
+          p.categoryIds?.includes("cat-nuts")
+        );
+      }
+      return (
         p.category?.slug?.toLowerCase() === cat ||
-        p.categoryId?.toLowerCase() === cat
-    );
+        p.categoryId?.toLowerCase() === cat ||
+        p.categoryIds?.map((c) => c.toLowerCase()).includes(cat)
+      );
+    });
   }
 
   // 3. Subcategory filter
