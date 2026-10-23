@@ -224,7 +224,7 @@ export default function ProductListPage({
   // Derive list of all unique brands in the catalog
   const availableBrands = useMemo(() => {
     const brandsSet = new Set();
-    products.forEach((p) => {
+    (products || []).filter((p) => !p.isTestFixture && !p.isCompatibilityFixture).forEach((p) => {
       if (p.brand) brandsSet.add(p.brand);
     });
     return Array.from(brandsSet).sort();
@@ -246,7 +246,8 @@ export default function ProductListPage({
 
   // Filter products locally (or from props)
   const filteredProducts = useMemo(() => {
-    let list = [...products];
+    // Ensure customer-facing catalogue contains only official products (19 Fasteners, 20 Electronics)
+    let list = (products || []).filter((p) => !p.isTestFixture && !p.isCompatibilityFixture);
 
     // 0. Only active products & products in active categories (Storefront requirement)
     list = list.filter((p) => p.isActive !== false);
@@ -1065,7 +1066,7 @@ export default function ProductListPage({
                     <div className="vtx-section-banner">
                       <div className="vtx-section-banner-title">
                         <span className="vtx-section-num-tag">
-                          {selectedCategory === "nuts" || selectedCategory === "cat-nuts" ? "CATEGORY 4" : "SECTION 1"}
+                          {selectedCategory === "nuts" || selectedCategory === "cat-nuts" ? "NUTS" : "FASTENERS"}
                         </span>
                         <h2>
                           {selectedCategory === "nuts" || selectedCategory === "cat-nuts" ? "Nut Types & Lock Assemblies" : "Precision Fasteners & Screws"}
@@ -1102,7 +1103,7 @@ export default function ProductListPage({
                             ? "TOOLS"
                             : selectedCategory === "automation"
                             ? "AUTOMATION"
-                            : "SECTION 2"}
+                            : "ELECTRONIC PRODUCTS"}
                         </span>
                         <h2>
                           {selectedCategory === "tools"
@@ -1124,7 +1125,6 @@ export default function ProductListPage({
                         {filteredProducts.filter((p) => p.subcategory?.slug === "hvnex-microcontrollers").length > 0 && (
                           <div className="vtx-text-category-card">
                             <div className="vtx-text-category-header">
-                              <span className="vtx-text-cat-num">3</span>
                               <div className="vtx-text-cat-headings">
                                 <h3>HVNEX – Microcontroller Boards</h3>
                                 <span className="vtx-text-cat-subtitle">Compact Technical Listing • No Images</span>
@@ -1149,7 +1149,6 @@ export default function ProductListPage({
                         {filteredProducts.filter((p) => p.subcategory?.slug === "hvnex-motor-drivers").length > 0 && (
                           <div className="vtx-text-category-card">
                             <div className="vtx-text-category-header">
-                              <span className="vtx-text-cat-num">4</span>
                               <div className="vtx-text-cat-headings">
                                 <h3>HVNEX – DC Motor Drivers</h3>
                                 <span className="vtx-text-cat-subtitle">Compact Technical Listing • No Images</span>
@@ -1174,7 +1173,6 @@ export default function ProductListPage({
                         {filteredProducts.filter((p) => p.subcategory?.slug === "hvnex-plc-controllers").length > 0 && (
                           <div className="vtx-text-category-card">
                             <div className="vtx-text-category-header">
-                              <span className="vtx-text-cat-num">5</span>
                               <div className="vtx-text-cat-headings">
                                 <h3>HVNEX – PLC Controller</h3>
                                 <span className="vtx-text-cat-subtitle">Compact Technical Listing • No Images</span>
@@ -1199,7 +1197,6 @@ export default function ProductListPage({
                         {filteredProducts.filter((p) => p.subcategory?.slug === "hvnex-buck-converters").length > 0 && (
                           <div className="vtx-text-category-card">
                             <div className="vtx-text-category-header">
-                              <span className="vtx-text-cat-num">6</span>
                               <div className="vtx-text-cat-headings">
                                 <h3>HVNEX – DC-DC Buck Converters</h3>
                                 <span className="vtx-text-cat-subtitle">Compact Technical Listing • No Images</span>
@@ -1230,7 +1227,6 @@ export default function ProductListPage({
                         ).length > 0 && (
                           <div className="vtx-text-category-card">
                             <div className="vtx-text-category-header">
-                              <span className="vtx-text-cat-num">HVNEX</span>
                               <div className="vtx-text-cat-headings">
                                 <h3>HVNEX Specialized Controllers</h3>
                                 <span className="vtx-text-cat-subtitle">Technical Listing • No Images</span>
@@ -1266,7 +1262,6 @@ export default function ProductListPage({
                         {filteredProducts.filter((p) => p.subcategory?.slug === "lithium-ion-batteries").length > 0 && (
                           <div className="vtx-subcat-group-block">
                             <div className="vtx-subcat-group-header">
-                              <span className="vtx-group-badge">Category 1</span>
                               <h3 className="vtx-group-title">Lithium-Ion Batteries / Cells</h3>
                               <span className="vtx-group-count">
                                 {filteredProducts.filter((p) => p.subcategory?.slug === "lithium-ion-batteries").length} Verified Cells
@@ -1294,7 +1289,6 @@ export default function ProductListPage({
                         {filteredProducts.filter((p) => p.subcategory?.slug === "electronic-components").length > 0 && (
                           <div className="vtx-subcat-group-block">
                             <div className="vtx-subcat-group-header">
-                              <span className="vtx-group-badge">Category 2</span>
                               <h3 className="vtx-group-title">Electronic Components</h3>
                               <span className="vtx-group-count">
                                 {filteredProducts.filter((p) => p.subcategory?.slug === "electronic-components").length} Components
@@ -1327,7 +1321,6 @@ export default function ProductListPage({
                         ).length > 0 && (
                           <div className="vtx-subcat-group-block">
                             <div className="vtx-subcat-group-header">
-                              <span className="vtx-group-badge">Hardware</span>
                               <h3 className="vtx-group-title">Additional Prototyping Electronics</h3>
                               <span className="vtx-group-count">
                                 {filteredProducts.filter((p) =>

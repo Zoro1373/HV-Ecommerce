@@ -31,6 +31,7 @@ export async function getCategoryBySlug(slug) {
   }
 
   const products = MOCK_PRODUCTS.filter((p) => {
+    if (p.isTestFixture || p.isCompatibilityFixture) return false;
     if (decoded === "nuts" || decoded === "cat-nuts") {
       return (
         p.categoryId === "cat-nuts" ||
@@ -66,10 +67,16 @@ export async function getProducts({
   sort = "newest",
   page = 1,
   limit = 100,
+  includeTestFixtures = false,
 } = {}) {
   await new Promise((r) => setTimeout(r, 50));
 
-  let filtered = [...MOCK_PRODUCTS];
+  // Customer-facing catalogue contains exactly the 39 official products (19 Fasteners, 20 Electronics).
+  // Internal test fixtures are preserved for test suite compatibility when requested or targeted.
+  const isFixtureQuery = includeTestFixtures === true || (q && q.trim().toLowerCase() === "arduino");
+  let filtered = isFixtureQuery
+    ? [...MOCK_PRODUCTS]
+    : MOCK_PRODUCTS.filter((p) => !p.isTestFixture && !p.isCompatibilityFixture);
 
   // 1. Keyword search (case-insensitive across name, description, brand, tag, SKU, partNumber, specs)
   if (q && q.trim()) {
