@@ -35,7 +35,16 @@ import externalSerratedWasherImg from "./fasteners/external-serrated-washer.svg"
 import brassSlantKnurledInsertImg from "./fasteners/brass-slant-knurled-insert.svg";
 import brassThreadedInsertImg from "./fasteners/brass-threaded-insert.svg";
 
-// Lithium-Ion Cells & Electronic Components (Robu-inspired)
+// Lithium-Ion Cells & Electronic Components (Robu-inspired studio photography & vector specs)
+import dmegc18650CellImg from "./electronics/dmegc-18650-cell.jpg";
+import dmegc21700CellImg from "./electronics/dmegc-21700-cell.jpg";
+import norda21700CellImg from "./electronics/norda-21700-cell.webp";
+import norda18650CellImg from "./electronics/norda-18650-cell.webp";
+import panasonic21700CellImg from "./electronics/panasonic-21700-cell.jpg";
+import gl12BreadboardImg from "./electronics/gl12-breadboard.jpg";
+import jumperCablesPhotoImg from "./electronics/jumper-cables.jpg";
+import bergStripHeadersImg from "./electronics/berg-strip-headers.jpg";
+
 import dmegc18650_2600Img from "./electronics/dmegc-18650-2600.svg";
 import dmegc18650_2900Img from "./electronics/dmegc-18650-2900.svg";
 import dmegc18650_3200Img from "./electronics/dmegc-18650-3200.svg";
@@ -81,7 +90,14 @@ export const PRODUCT_PHOTOS = {
   brassSlantKnurledInsert: brassSlantKnurledInsertImg,
   brassThreadedInsert: brassThreadedInsertImg,
 
-  // Lithium Cells
+  // Lithium Cells - Genuine Commercial Photography
+  dmegc18650Cell: dmegc18650CellImg,
+  dmegc21700Cell: dmegc21700CellImg,
+  norda21700Cell: norda21700CellImg,
+  norda18650Cell: norda18650CellImg,
+  panasonic21700Cell: panasonic21700CellImg,
+
+  // Lithium Cells - Technical Vector Fallbacks
   dmegc18650_2600: dmegc18650_2600Img,
   dmegc18650_2900: dmegc18650_2900Img,
   dmegc18650_3200: dmegc18650_3200Img,
@@ -91,11 +107,33 @@ export const PRODUCT_PHOTOS = {
   norda18650_2600: norda18650_2600Img,
 
   // Electronic Components
+  gl12Breadboard: gl12BreadboardImg,
+  jumperCablesPhoto: jumperCablesPhotoImg,
+  bergStripHeaders: bergStripHeadersImg,
   breadboardGl12: breadboardGl12Img,
   jumperCables: jumperCablesImg,
   maleBergStrip: maleBergStripImg,
   femaleBergStrip: femaleBergStripImg,
 };
+
+/**
+ * Strict helper to identify text-only electronic products (Categories 3, 4, 5, 6).
+ * No product photos, thumbnails, image placeholders, or empty image containers.
+ */
+export function isTextOnlyProduct(product) {
+  if (!product) return false;
+  if (product.isTextOnly === true || product.subcategory?.textOnly === true) return true;
+  const sub = (product.subcategory?.slug || "").toLowerCase();
+  const slug = (product.slug || "").toLowerCase();
+  return (
+    sub.startsWith("hvnex-") ||
+    sub === "hvnex-microcontrollers" ||
+    sub === "hvnex-motor-drivers" ||
+    sub === "hvnex-plc-controllers" ||
+    sub === "hvnex-buck-converters" ||
+    slug.startsWith("hvnex-")
+  );
+}
 
 /**
  * Returns an appropriate SVG or image for a given product slug and category.
@@ -149,20 +187,19 @@ export function getProductVisual(product) {
   if (slug.includes("slant-knurled")) return brassSlantKnurledInsertImg;
   if (slug.includes("brass") || slug.includes("insert")) return brassThreadedInsertImg;
 
-  // Batteries
-  if (slug.includes("dmegc") && slug.includes("18650") && slug.includes("2600")) return dmegc18650_2600Img;
-  if (slug.includes("dmegc") && slug.includes("18650") && slug.includes("2900")) return dmegc18650_2900Img;
-  if (slug.includes("dmegc") && slug.includes("18650") && slug.includes("3200")) return dmegc18650_3200Img;
-  if (slug.includes("dmegc") && slug.includes("21700")) return dmegc21700_4500Img;
-  if (slug.includes("panasonic") && slug.includes("21700")) return panasonic21700_4500Img;
-  if (slug.includes("norda") && slug.includes("21700")) return norda21700_4500Img;
-  if (slug.includes("norda") && slug.includes("18650")) return norda18650_2600Img;
+  // Batteries - Photography with vector illustration fallback
+  if (slug.includes("dmegc") && slug.includes("18650")) return dmegc18650CellImg || dmegc18650_2600Img;
+  if (slug.includes("dmegc") && slug.includes("21700")) return dmegc21700CellImg || dmegc21700_4500Img;
+  if (slug.includes("panasonic") && slug.includes("21700")) return panasonic21700CellImg || panasonic21700_4500Img;
+  if (slug.includes("norda") && slug.includes("21700")) return norda21700CellImg || norda21700_4500Img;
+  if (slug.includes("norda") && slug.includes("18650")) return norda18650CellImg || norda18650_2600Img;
 
   // Components
-  if (slug.includes("breadboard")) return breadboardGl12Img;
-  if (slug.includes("jumper")) return jumperCablesImg;
-  if (slug.includes("male-berg")) return maleBergStripImg;
-  if (slug.includes("female-berg")) return femaleBergStripImg;
+  if (slug.includes("breadboard")) return gl12BreadboardImg || breadboardGl12Img;
+  if (slug.includes("jumper")) return jumperCablesPhotoImg || jumperCablesImg;
+  if (slug.includes("male-berg")) return maleBergStripImg || bergStripHeadersImg;
+  if (slug.includes("female-berg")) return femaleBergStripImg || bergStripHeadersImg;
+  if (slug.includes("berg")) return bergStripHeadersImg;
 
   // Existing photographed items (legacy)
   if (slug.includes("arduino-uno")) return arduinoImg;
@@ -178,6 +215,10 @@ export function getProductVisual(product) {
  * Strictly returns null for electronic categories 3, 4, 5, 6 (no images / no placeholders).
  */
 export function ComponentIllustration({ type, brand = "VERTEX", specs = {}, className = "" }) {
+  if (type === "text-only" || type === "hvnex" || brand === "HVNEX") {
+    return null;
+  }
+
   if (type === "battery") {
     return (
       <svg

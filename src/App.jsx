@@ -352,7 +352,7 @@ export default function App() {
       setProductsLoading(true);
       setProductsError(null);
       const params = {
-        limit: 12,
+        limit: currentView === "products" ? 100 : 12,
       };
       if (activeSearch) params.q = activeSearch;
       if (selectedCategory && selectedCategory !== "all") params.category = selectedCategory;
@@ -367,7 +367,7 @@ export default function App() {
     } finally {
       setProductsLoading(false);
     }
-  }, [activeSearch, selectedCategory]);
+  }, [activeSearch, selectedCategory, currentView]);
 
   useEffect(() => {
     loadCategories();
@@ -1706,6 +1706,9 @@ export default function App() {
     (p) =>
       p.category?.slug === "nuts" ||
       p.categoryId === "cat-nuts" ||
+      p.subcategory?.slug === "nuts" ||
+      p.subcategory?.id === "sub-nuts" ||
+      p.categoryIds?.includes("cat-nuts") ||
       p.category?.slug?.includes("nut")
   );
 

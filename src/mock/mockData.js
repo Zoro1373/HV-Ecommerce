@@ -41,19 +41,15 @@ import externalSerratedWasherImg from "../assets/hardware/fasteners/external-ser
 import brassSlantKnurledInsertImg from "../assets/hardware/fasteners/brass-slant-knurled-insert.svg";
 import brassThreadedInsertImg from "../assets/hardware/fasteners/brass-threaded-insert.svg";
 
-// Lithium-Ion Cells & Electronic Components (Robu-inspired)
-import dmegc18650_2600Img from "../assets/hardware/electronics/dmegc-18650-2600.svg";
-import dmegc18650_2900Img from "../assets/hardware/electronics/dmegc-18650-2900.svg";
-import dmegc18650_3200Img from "../assets/hardware/electronics/dmegc-18650-3200.svg";
-import dmegc21700_4500Img from "../assets/hardware/electronics/dmegc-21700-4500.svg";
-import norda21700_4500Img from "../assets/hardware/electronics/norda-21700-4500.svg";
-import panasonic21700_4500Img from "../assets/hardware/electronics/panasonic-21700-4500.svg";
-import norda18650_2600Img from "../assets/hardware/electronics/norda-18650-2600.svg";
-
-import breadboardGl12Img from "../assets/hardware/electronics/breadboard-gl12.svg";
-import jumperCablesImg from "../assets/hardware/electronics/jumper-cables.svg";
-import maleBergStripImg from "../assets/hardware/electronics/male-berg-strip.svg";
-import femaleBergStripImg from "../assets/hardware/electronics/female-berg-strip.svg";
+// Lithium-Ion Cells & Electronic Components (Commercial Photography & Verified Specifications)
+import dmegc18650CellImg from "../assets/hardware/electronics/dmegc-18650-cell.jpg";
+import dmegc21700CellImg from "../assets/hardware/electronics/dmegc-21700-cell.jpg";
+import norda21700CellImg from "../assets/hardware/electronics/norda-21700-cell.webp";
+import norda18650CellImg from "../assets/hardware/electronics/norda-18650-cell.webp";
+import panasonic21700CellImg from "../assets/hardware/electronics/panasonic-21700-cell.jpg";
+import gl12BreadboardImg from "../assets/hardware/electronics/gl12-breadboard.jpg";
+import jumperCablesPhotoImg from "../assets/hardware/electronics/jumper-cables.jpg";
+import bergStripHeadersImg from "../assets/hardware/electronics/berg-strip-headers.jpg";
 
 export const MOCK_CATEGORIES = [
   {
@@ -112,7 +108,8 @@ export const MOCK_CATEGORIES = [
     icon: "⚡",
     tint: "tint-blue",
     description: "Sensors, solid state relays, and prototyping hardware.",
-    productsCount: 2,
+    productsCount: 0,
+    isActive: false,
     children: [],
   },
   {
@@ -122,7 +119,8 @@ export const MOCK_CATEGORIES = [
     icon: "🛠",
     tint: "tint-orange",
     description: "Ball-end hex key sets and precision assembly hand tools.",
-    productsCount: 1,
+    productsCount: 0,
+    isActive: false,
     children: [],
   },
 ];
@@ -140,7 +138,7 @@ export const MOCK_PRODUCTS = [
     description: "Cheese Head (CHHD) machine screw with precision slotted drive. Engineered for mechanical assemblies, industrial panel mounting, and electrical junction clamps.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-flat", name: "1. Screws — Flat (Slotted)", slug: "screws-flat-slotted" },
+    subcategory: { id: "sub-screws-flat", name: "Screws — Flat (Slotted)", slug: "screws-flat-slotted" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Flat (Slotted)",
@@ -182,7 +180,7 @@ export const MOCK_PRODUCTS = [
     description: "Precision Phillips cross-recess pan head screw with flat under-head bearing surface for even load distribution on sheet metal and brackets.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-cross", name: "2. Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+    subcategory: { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Cross (Phillips)",
@@ -222,7 +220,7 @@ export const MOCK_PRODUCTS = [
     description: "Flat-top countersunk screw designed to sit flush with surface materials upon tightening for clean aerodynamic and structural finishes.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-cross", name: "2. Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+    subcategory: { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Cross (Phillips)",
@@ -261,7 +259,7 @@ export const MOCK_PRODUCTS = [
     description: "Pan head screw with engineered tapping thread profile for direct retention into plastics, sheet metal, and enclosures without pre-tapping.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-cross", name: "2. Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+    subcategory: { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Cross (Phillips)",
@@ -301,7 +299,7 @@ export const MOCK_PRODUCTS = [
     description: "Countersunk flat-head tapping screw that drives directly into pre-drilled holes in aluminum brackets, polycarbonate, and wood enclosures.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-cross", name: "2. Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+    subcategory: { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Cross (Phillips)",
@@ -341,7 +339,7 @@ export const MOCK_PRODUCTS = [
     description: "Ultra-fine precision micro machine screws engineered for laptop chassis assembly, mobile phone internals, hard drive caddies, and small electronics.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-cross", name: "2. Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+    subcategory: { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Cross (Phillips Precision)",
@@ -380,7 +378,7 @@ export const MOCK_PRODUCTS = [
     description: "Countersunk bugle-head coarse thread drywall screws with sharp piercing points for rapid attachment to drywall, gypsum board, studs, and wood framing.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-cross", name: "2. Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+    subcategory: { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Phillips #2 Recess",
@@ -419,7 +417,7 @@ export const MOCK_PRODUCTS = [
     description: "Engineered TEK flute drill point eliminates hole drilling and tapping in one single operation through heavy gauge sheet metals and brackets.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-cross", name: "2. Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
+    subcategory: { id: "sub-screws-cross", name: "Screws — Cross (Phillips)", slug: "screws-cross-phillips" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Cross (Phillips)",
@@ -461,7 +459,7 @@ export const MOCK_PRODUCTS = [
     description: "High-tensile cylindrical socket head cap screw for precision CNC machinery, motor couplings, 3D printer carriages, and robotic joints.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-hex", name: "3. Screws — Hex (Allen)", slug: "screws-hex-allen" },
+    subcategory: { id: "sub-screws-hex", name: "Screws — Hex (Allen)", slug: "screws-hex-allen" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Hex (Allen)",
@@ -500,7 +498,7 @@ export const MOCK_PRODUCTS = [
     description: "Low-profile rounded dome button head screw with hexagonal socket drive. Delivers a sleek aesthetic and prevents clothing snagging on external chassis.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-hex", name: "3. Screws — Hex (Allen)", slug: "screws-hex-allen" },
+    subcategory: { id: "sub-screws-hex", name: "Screws — Hex (Allen)", slug: "screws-hex-allen" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Hex (Allen)",
@@ -539,7 +537,7 @@ export const MOCK_PRODUCTS = [
     description: "Flat countersunk head with precision hex socket drive for high-torque tightening without stripping, seating completely flush in chamfered holes.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-hex", name: "3. Screws — Hex (Allen)", slug: "screws-hex-allen" },
+    subcategory: { id: "sub-screws-hex", name: "Screws — Hex (Allen)", slug: "screws-hex-allen" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Hex (Allen)",
@@ -579,6 +577,7 @@ export const MOCK_PRODUCTS = [
     slug: "hex-nut",
     description: "Standard industrial hexagon metric full nut for machine bolts, threaded rods, and structural assemblies.",
     categoryId: "cat-fasteners",
+    categoryIds: ["cat-fasteners", "cat-nuts"],
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
     subcategory: { id: "sub-nuts", name: "Nuts", slug: "nuts" },
     brand: "VERTEX",
@@ -616,6 +615,7 @@ export const MOCK_PRODUCTS = [
     slug: "nyloc-nut",
     description: "Nylon insert lock nut that prevents loosening under severe thermal cycling and mechanical vibration without requiring lock washers.",
     categoryId: "cat-fasteners",
+    categoryIds: ["cat-fasteners", "cat-nuts"],
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
     subcategory: { id: "sub-nuts", name: "Nuts", slug: "nuts" },
     brand: "VERTEX",
@@ -655,6 +655,7 @@ export const MOCK_PRODUCTS = [
     slug: "wing-nut",
     description: "Butterfly wing nut designed for frequent manual toolless adjustment, fixture clamping, and quick maintenance access.",
     categoryId: "cat-fasteners",
+    categoryIds: ["cat-fasteners", "cat-nuts"],
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
     subcategory: { id: "sub-nuts", name: "Nuts", slug: "nuts" },
     brand: "VERTEX",
@@ -696,7 +697,7 @@ export const MOCK_PRODUCTS = [
     description: "Flat circular plain load-distribution washer engineered to protect surface finishes and span oversized bolt holes.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-washers", name: "5. Washers", slug: "washers" },
+    subcategory: { id: "sub-washers", name: "Washers", slug: "washers" },
     brand: "VERTEX",
     specs: {
       "Type": "Plain / Flat Washer",
@@ -733,7 +734,7 @@ export const MOCK_PRODUCTS = [
     description: "Helical split spring lock washer providing continuous spring tension to absorb vibration and prevent bolt loosening.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-washers", name: "5. Washers", slug: "washers" },
+    subcategory: { id: "sub-washers", name: "Washers", slug: "washers" },
     brand: "VERTEX",
     specs: {
       "Type": "Helical Split Spring Washer",
@@ -770,7 +771,7 @@ export const MOCK_PRODUCTS = [
     description: "External tooth lock washer that bites into bolt head and substrate surfaces for maximum grounding continuity and anti-vibration grip.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-washers", name: "5. Washers", slug: "washers" },
+    subcategory: { id: "sub-washers", name: "Washers", slug: "washers" },
     brand: "VERTEX",
     specs: {
       "Type": "External Serrated Tooth Washer",
@@ -809,7 +810,7 @@ export const MOCK_PRODUCTS = [
     description: "Heat-set slant knurled brass inserts specifically engineered for thermoplastic insertion in 3D prints (PLA, PETG, ABS, Nylon).",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-brass-inserts", name: "6. Brass Inserts", slug: "brass-inserts" },
+    subcategory: { id: "sub-brass-inserts", name: "Brass Inserts", slug: "brass-inserts" },
     brand: "VERTEX",
     specs: {
       "Material": "Brass",
@@ -848,7 +849,7 @@ export const MOCK_PRODUCTS = [
     description: "Precision-machined brass threaded bushings for ultrasonic embedding, plastic injection enclosures, and wood composite joints.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-brass-inserts", name: "6. Brass Inserts", slug: "brass-inserts" },
+    subcategory: { id: "sub-brass-inserts", name: "Brass Inserts", slug: "brass-inserts" },
     brand: "VERTEX",
     specs: {
       "Material": "Machined Brass Alloy",
@@ -893,7 +894,7 @@ export const MOCK_PRODUCTS = [
     description: "HVNEX flagship microcontroller development board with integrated USB programming interface, multiple PWM channels, and industrial protection circuitry.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-mcu", name: "3. HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
+    subcategory: { id: "sub-hvnex-mcu", name: "HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-T1",
@@ -931,7 +932,7 @@ export const MOCK_PRODUCTS = [
     description: "Compact form-factor HVNEX microcontroller board optimized for space-constrained IoT nodes and wearable telemetry prototypes.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-mcu", name: "3. HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
+    subcategory: { id: "sub-hvnex-mcu", name: "HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-T2 Mini",
@@ -970,7 +971,7 @@ export const MOCK_PRODUCTS = [
     description: "Dual-core Wi-Fi & Bluetooth enabled microcontroller board from HVNEX for cloud edge computing and remote industrial automation.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-mcu", name: "3. HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
+    subcategory: { id: "sub-hvnex-mcu", name: "HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-ESP32",
@@ -1009,7 +1010,7 @@ export const MOCK_PRODUCTS = [
     description: "Ultra-compact Wi-Fi wireless microcontroller module from HVNEX designed for embedded sensing and wireless smart node retrofits.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-mcu", name: "3. HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
+    subcategory: { id: "sub-hvnex-mcu", name: "HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-ESP Mini",
@@ -1050,7 +1051,7 @@ export const MOCK_PRODUCTS = [
     description: "High performance 20A continuous DC motor driver from HVNEX featuring MOSFET H-bridge switching and transient thermal dissipation.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-drivers", name: "4. HVNEX – DC Motor Drivers", slug: "hvnex-motor-drivers", textOnly: true },
+    subcategory: { id: "sub-hvnex-drivers", name: "HVNEX – DC Motor Drivers", slug: "hvnex-motor-drivers", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-D20",
@@ -1089,7 +1090,7 @@ export const MOCK_PRODUCTS = [
     description: "Heavy-duty 60A high-power DC motor driver from HVNEX with dual aluminum heatsinks, optoisolated logic inputs, and peak current protection.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-drivers", name: "4. HVNEX – DC Motor Drivers", slug: "hvnex-motor-drivers", textOnly: true },
+    subcategory: { id: "sub-hvnex-drivers", name: "HVNEX – DC Motor Drivers", slug: "hvnex-motor-drivers", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-D60",
@@ -1130,7 +1131,7 @@ export const MOCK_PRODUCTS = [
     description: "Programmable Logic Controller (PLC) from HVNEX engineered for industrial relay sequencing, digital I/O monitoring, and production line automation.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-plc", name: "5. HVNEX – PLC Controller", slug: "hvnex-plc-controllers", textOnly: true },
+    subcategory: { id: "sub-hvnex-plc", name: "HVNEX – PLC Controller", slug: "hvnex-plc-controllers", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-PLC Basic",
@@ -1170,7 +1171,7 @@ export const MOCK_PRODUCTS = [
     description: "Step-down DC-DC buck converter designed by HVNEX for converting 5V system rails down to high-precision 3.3V microcontroller logic levels.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-buck", name: "6. HVNEX – DC-DC Buck Converters", slug: "hvnex-buck-converters", textOnly: true },
+    subcategory: { id: "sub-hvnex-buck", name: "HVNEX – DC-DC Buck Converters", slug: "hvnex-buck-converters", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-BUCK 5V to 3.3V",
@@ -1210,7 +1211,7 @@ export const MOCK_PRODUCTS = [
     description: "Heavy-duty 300W high-power adjustable step-down DC-DC buck converter by HVNEX supporting 7–32V input and 0.8–28V output with up to 12A current delivery.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-buck", name: "6. HVNEX – DC-DC Buck Converters", slug: "hvnex-buck-converters", textOnly: true },
+    subcategory: { id: "sub-hvnex-buck", name: "HVNEX – DC-DC Buck Converters", slug: "hvnex-buck-converters", textOnly: true },
     brand: "HVNEX",
     specs: {
       "Model": "HVNEX-BUCK 300W 12A Adjustable",
@@ -1254,7 +1255,7 @@ export const MOCK_PRODUCTS = [
     description: "Automotive-grade cylindrical lithium-ion cell manufactured by DMEGC. Engineered for electric vehicle battery packs, solar energy storage, and industrial power packs.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-lithium-cells", name: "1. Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
+    subcategory: { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
     brand: "DMEGC",
     specs: {
       "Cell Format": "18650 Cylindrical",
@@ -1266,7 +1267,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc18650_2600Img,
+    imageUrl: dmegc18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1293,7 +1294,7 @@ export const MOCK_PRODUCTS = [
     description: "High energy density 2900 mAh EV-grade 18650 cell by DMEGC with low internal impedance and certified thermal cycle stability.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-lithium-cells", name: "1. Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
+    subcategory: { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
     brand: "DMEGC",
     specs: {
       "Cell Format": "18650 Cylindrical",
@@ -1305,7 +1306,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc18650_2900Img,
+    imageUrl: dmegc18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1332,7 +1333,7 @@ export const MOCK_PRODUCTS = [
     description: "Premium capacity 3200 mAh cylindrical lithium-ion cell for electric 2-wheelers, robotics mobility systems, and high-drain power modules.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-lithium-cells", name: "1. Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
+    subcategory: { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
     brand: "DMEGC",
     specs: {
       "Cell Format": "18650 Cylindrical",
@@ -1344,7 +1345,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc18650_3200Img,
+    imageUrl: dmegc18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1371,7 +1372,7 @@ export const MOCK_PRODUCTS = [
     description: "High capacity 21700 EV-grade cell offering 4500 mAh rated capacity for heavy-duty electric mobility and commercial energy storage arrays.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-lithium-cells", name: "1. Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
+    subcategory: { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
     brand: "DMEGC",
     specs: {
       "Cell Format": "21700 Cylindrical",
@@ -1383,7 +1384,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: dmegc21700_4500Img,
+    imageUrl: dmegc21700CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1410,7 +1411,7 @@ export const MOCK_PRODUCTS = [
     description: "NORDA Nickel Manganese Cobalt (NMC) 21700 cell with 4500 mAh high capacity for industrial drones and battery pack construction.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-lithium-cells", name: "1. Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
+    subcategory: { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
     brand: "NORDA",
     specs: {
       "Cell Format": "21700 Cylindrical",
@@ -1420,7 +1421,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "High Capacity",
-    imageUrl: norda21700_4500Img,
+    imageUrl: norda21700CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1447,7 +1448,7 @@ export const MOCK_PRODUCTS = [
     description: "Authentic Panasonic 21700 NMC cylindrical cell with verified 4500 mAh capacity for premium electric powertrain architectures.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-lithium-cells", name: "1. Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
+    subcategory: { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
     brand: "Panasonic",
     specs: {
       "Cell Format": "21700 Cylindrical",
@@ -1457,7 +1458,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "Panasonic Genuine",
-    imageUrl: panasonic21700_4500Img,
+    imageUrl: panasonic21700CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1484,7 +1485,7 @@ export const MOCK_PRODUCTS = [
     description: "NORDA 18650 EV-grade cell offering 2600 mAh capacity with NMC chemistry. Tailored for commercial light EV battery packs and backup systems.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-lithium-cells", name: "1. Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
+    subcategory: { id: "sub-lithium-cells", name: "Lithium-Ion Batteries / Cells", slug: "lithium-ion-batteries", textOnly: false },
     brand: "NORDA",
     specs: {
       "Cell Format": "18650 Cylindrical",
@@ -1495,7 +1496,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8507",
     gstRate: 18.0,
     tag: "EV Grade",
-    imageUrl: norda18650_2600Img,
+    imageUrl: norda18650CellImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1524,7 +1525,7 @@ export const MOCK_PRODUCTS = [
     description: "Standard GL-12 840-tie point solderless prototyping breadboard with colored distribution power rails and adhesive back backing.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-electronic-components", name: "2. Electronic Components", slug: "electronic-components", textOnly: false },
+    subcategory: { id: "sub-electronic-components", name: "Electronic Components", slug: "electronic-components", textOnly: false },
     brand: "VERTEX",
     specs: {
       "Model": "GL-12",
@@ -1535,7 +1536,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8534",
     gstRate: 18.0,
     tag: "Prototyping",
-    imageUrl: breadboardGl12Img,
+    imageUrl: gl12BreadboardImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1562,7 +1563,7 @@ export const MOCK_PRODUCTS = [
     description: "Multi-colored flexible ribbon jumper cables for breadboard hookup, sensor wiring, and microcontroller prototyping.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-electronic-components", name: "2. Electronic Components", slug: "electronic-components", textOnly: false },
+    subcategory: { id: "sub-electronic-components", name: "Electronic Components", slug: "electronic-components", textOnly: false },
     brand: "VERTEX",
     specs: {
       "Type": "Prototyping Jumper Wires",
@@ -1572,7 +1573,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8544",
     gstRate: 18.0,
     tag: null,
-    imageUrl: jumperCablesImg,
+    imageUrl: jumperCablesPhotoImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1599,7 +1600,7 @@ export const MOCK_PRODUCTS = [
     description: "40-pin breakable single-row straight male pin header strip with standard 2.54mm pitch for PCB and breadboard connections.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-electronic-components", name: "2. Electronic Components", slug: "electronic-components", textOnly: false },
+    subcategory: { id: "sub-electronic-components", name: "Electronic Components", slug: "electronic-components", textOnly: false },
     brand: "VERTEX",
     specs: {
       "Type": "Male Pin Header (Berg Strip)",
@@ -1610,7 +1611,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8536",
     gstRate: 18.0,
     tag: null,
-    imageUrl: maleBergStripImg,
+    imageUrl: bergStripHeadersImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1637,7 +1638,7 @@ export const MOCK_PRODUCTS = [
     description: "40-pin single-row female socket header strip with standard 2.54mm pitch for module stacking and Arduino shield expansion.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-electronic-components", name: "2. Electronic Components", slug: "electronic-components", textOnly: false },
+    subcategory: { id: "sub-electronic-components", name: "Electronic Components", slug: "electronic-components", textOnly: false },
     brand: "VERTEX",
     specs: {
       "Type": "Female Header Socket (Berg Strip)",
@@ -1648,7 +1649,7 @@ export const MOCK_PRODUCTS = [
     hsnCode: "8536",
     gstRate: 18.0,
     tag: null,
-    imageUrl: femaleBergStripImg,
+    imageUrl: bergStripHeadersImg,
     price: null,
     mrp: null,
     inStock: true,
@@ -1674,12 +1675,14 @@ export const MOCK_PRODUCTS = [
   // ==========================================
   {
     id: "prod-arduino-uno-r3",
+    isTestFixture: true,
+    isCompatibilityFixture: true,
     name: "Arduino Uno R3 Microcontroller Board",
     slug: "arduino-uno-r3",
     description: "ATmega328P based microcontroller board with 14 digital I/O pins, 6 analog inputs, and 16 MHz ceramic resonator for prototyping and robotics.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-mcu", name: "3. HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
+    subcategory: { id: "sub-hvnex-mcu", name: "HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
     brand: "Arduino",
     specs: {
       "Microcontroller": "ATmega328P",
@@ -1714,12 +1717,14 @@ export const MOCK_PRODUCTS = [
   },
   {
     id: "prod-rpi-4b",
+    isTestFixture: true,
+    isCompatibilityFixture: true,
     name: "Raspberry Pi 4 Development Board",
     slug: "raspberry-pi-4-development-board",
     description: "Quad core 64-bit ARM Cortex-A72 single board computer with 4GB LPDDR4 SDRAM, dual-display micro-HDMI 4K, and Gigabit Ethernet.",
     categoryId: "cat-electronics",
     category: { id: "cat-electronics", name: "Electronic Products", slug: "electronics" },
-    subcategory: { id: "sub-hvnex-mcu", name: "3. HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
+    subcategory: { id: "sub-hvnex-mcu", name: "HVNEX – Microcontroller Boards", slug: "hvnex-microcontrollers", textOnly: true },
     brand: "Raspberry Pi",
     specs: {
       "Processor": "Broadcom BCM2711, Quad core Cortex-A72 (ARM v8) 64-bit SoC @ 1.5GHz",
@@ -1753,12 +1758,14 @@ export const MOCK_PRODUCTS = [
   },
   {
     id: "prod-ss-hex-bolt-m8",
+    isTestFixture: true,
+    isCompatibilityFixture: true,
     name: "Stainless Steel Hex Bolt (M8 x 30mm)",
     slug: "stainless-steel-hex-bolt-m8",
     description: "SS304 marine grade hexagon full-thread machine bolt engineered for heavy mechanical mountings, flange couplings, and outdoor frames.",
     categoryId: "cat-fasteners",
     category: { id: "cat-fasteners", name: "Fasteners", slug: "fasteners" },
-    subcategory: { id: "sub-screws-hex", name: "3. Screws — Hex (Allen)", slug: "screws-hex-allen" },
+    subcategory: { id: "sub-screws-hex", name: "Screws — Hex (Allen)", slug: "screws-hex-allen" },
     brand: "VERTEX",
     specs: {
       "Drive Type": "Hex External",
@@ -1793,12 +1800,15 @@ export const MOCK_PRODUCTS = [
   },
   {
     id: "prod-flanged-nut-m6",
+    isTestFixture: true,
+    isCompatibilityFixture: true,
     name: "Serrated Flanged Hex Nut (M6)",
     slug: "flanged-hex-nut-m6",
     description: "Zinc-plated serrated flange nuts that distribute clamping load and eliminate the requirement for loose washers.",
     categoryId: "cat-nuts",
+    categoryIds: ["cat-nuts", "cat-fasteners"],
     category: { id: "cat-nuts", name: "Nut Types", slug: "nuts" },
-    subcategory: { id: "sub-nuts", name: "4. Nuts", slug: "nuts" },
+    subcategory: { id: "sub-nuts", name: "Nuts", slug: "nuts" },
     brand: "VERTEX",
     specs: {
       "Type": "Serrated Flange Nut",
@@ -1833,6 +1843,8 @@ export const MOCK_PRODUCTS = [
   },
   {
     id: "prod-solid-state-relay",
+    isTestFixture: true,
+    isCompatibilityFixture: true,
     name: "Single Phase Solid State Relay (SSR-40DA)",
     slug: "solid-state-relay-ssr-40da",
     description: "Optically isolated 40A solid state relay for rapid and silent AC load switching with zero-crossing trigger.",
@@ -1872,6 +1884,8 @@ export const MOCK_PRODUCTS = [
   },
   {
     id: "prod-allen-key-set",
+    isTestFixture: true,
+    isCompatibilityFixture: true,
     name: "Industrial Ball-End Hex Key Set (9-Piece)",
     slug: "industrial-ball-end-hex-key-set",
     description: "Chrome Vanadium steel metric hex key wrench set (1.5mm - 10mm) with ball end for up to 25° angle entry.",
@@ -2098,3 +2112,8 @@ export const MOCK_ORDERS = [
     },
   },
 ];
+
+
+export const OFFICIAL_MOCK_PRODUCTS = MOCK_PRODUCTS.filter(
+  (p) => !p.isTestFixture && !p.isCompatibilityFixture
+);
