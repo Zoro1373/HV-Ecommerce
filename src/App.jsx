@@ -176,6 +176,14 @@ export default function App() {
     return null;
   });
 
+  const [selectedVariantId, setSelectedVariantId] = useState(() => {
+    if (typeof window !== "undefined" && window.location.search) {
+      const p = new URLSearchParams(window.location.search);
+      return p.get("variant") || p.get("size") || null;
+    }
+    return null;
+  });
+
   const [selectedCatalogCategory, setSelectedCatalogCategory] = useState(() => {
     if (typeof window !== "undefined" && window.location.search) {
       const p = new URLSearchParams(window.location.search);
@@ -318,7 +326,9 @@ export default function App() {
         setCurrentView("orders");
       } else if (path.startsWith("/product/")) {
         const slug = decodeURIComponent(path.replace("/product/", "").split("/")[0] || "");
+        const p = new URLSearchParams(window.location.search);
         setSelectedProductSlug(slug);
+        setSelectedVariantId(p.get("variant") || p.get("size") || null);
         setCurrentView("product-detail");
       } else if (path === "/products" || path === "/catalog") {
         const p = new URLSearchParams(window.location.search);
@@ -510,10 +520,13 @@ export default function App() {
     }
   };
 
-  const handleOpenProductDetail = (productOrSlug) => {
+  const handleOpenProductDetail = (productOrSlug, variantId = null) => {
     const slug = typeof productOrSlug === "string" ? productOrSlug : productOrSlug.slug || productOrSlug.id;
+    const targetVariantId = variantId || (typeof productOrSlug === "object" ? productOrSlug.selectedVariantId || productOrSlug.variantId : null);
     setSelectedProductSlug(slug);
-    navigate("product-detail", "dashboard", null, slug);
+    setSelectedVariantId(targetVariantId);
+    const searchParam = targetVariantId ? `variant=${encodeURIComponent(targetVariantId)}` : "";
+    navigate("product-detail", "dashboard", null, slug, searchParam);
   };
 
   const handleNavigateCatalogWithCategory = (catSlug = "all", subcatSlug = "all") => {
@@ -1615,6 +1628,7 @@ export default function App() {
         ) : (
           <ProductDetailPage
             product={detailProduct}
+            initialVariantId={selectedVariantId}
             relatedProducts={detailRelated}
             onAddToCart={handleAddToCart}
             onNavigateHome={() => navigate("home")}

@@ -324,7 +324,7 @@ export default function ProductCard({
           {product.name}
         </h3>
 
-        {/* Clear Size & Dimension Indicator (OnlyScrews pattern) */}
+        {/* Clear Size & Dimension Indicator */}
         {(dimensions || unitLabel) && (
           <div
             className="product-size-indicator"

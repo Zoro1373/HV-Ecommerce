@@ -23,6 +23,7 @@ import { getProductImages } from "../../data/productGalleryData";
 
 export default function ProductDetailPage({
   product,
+  initialVariantId,
   relatedProducts = [],
   onAddToCart,
   onNavigateHome,
@@ -30,9 +31,28 @@ export default function ProductDetailPage({
   onSelectRelatedProduct,
   currentUser,
 }) {
+  const getInitialVariantIndex = () => {
+    if (!product?.variants?.length) return 0;
+    if (initialVariantId) {
+      const idx = product.variants.findIndex((v) => v.id === initialVariantId || v.sku === initialVariantId);
+      if (idx !== -1) return idx;
+    }
+    if (typeof window !== "undefined" && window.location?.search) {
+      const params = new URLSearchParams(window.location.search);
+      const varParam = params.get("variant") || params.get("size");
+      if (varParam) {
+        const idx = product.variants.findIndex(
+          (v) => v.id === varParam || v.sku === varParam || v.dimensions === varParam
+        );
+        if (idx !== -1) return idx;
+      }
+    }
+    return 0;
+  };
+
   const [quantity, setQuantity] = useState(1);
   const [quantityError, setQuantityError] = useState(null);
-  const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState(getInitialVariantIndex);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [imgError, setImgError] = useState(false);
   const [isZooming, setIsZooming] = useState(false);
@@ -52,7 +72,7 @@ export default function ProductDetailPage({
       setIsWishlisted(isItemInWishlist(product.id || product.slug));
       setQuantity(1);
       setQuantityError(null);
-      setSelectedVariantIdx(0);
+      setSelectedVariantIdx(getInitialVariantIndex());
       setActiveImageIdx(0);
       setImgError(false);
       setIsZooming(false);
@@ -63,7 +83,8 @@ export default function ProductDetailPage({
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     }
-  }, [product]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product, initialVariantId]);
 
   useEffect(() => {
     const handleWishlistUpdate = () => {
@@ -126,11 +147,6 @@ export default function ProductDetailPage({
 
   const sizeChart = getSizeChartForProduct(product);
 
-  // Drive icon
-  let driveIcon = "🔩";
-  if (driveType.toLowerCase().includes("hex") || driveType.toLowerCase().includes("allen")) driveIcon = "⬡";
-  else if (driveType.toLowerCase().includes("cross") || driveType.toLowerCase().includes("phillips")) driveIcon = "✚";
-  else if (driveType.toLowerCase().includes("flat") || driveType.toLowerCase().includes("slotted")) driveIcon = "━";
 
   // Quantity handlers
   const handleQuantityChange = (val) => {
@@ -234,44 +250,83 @@ export default function ProductDetailPage({
 
   return (
     <div className="vtx-detail-page" data-testid={`product-detail-${product.slug}`}>
-      {/* Breadcrumb Navigation */}
+      {/* Multi-Level Breadcrumb Navigation */}
       <nav className="vtx-breadcrumbs" aria-label="Product breadcrumb">
         <div className="vtx-breadcrumbs-inner">
           <button type="button" className="vtx-breadcrumb-link" onClick={onNavigateHome}>
             Home
           </button>
           <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
-          <button type="button" className="vtx-breadcrumb-link" onClick={onNavigateCatalog}>
-            Catalogue
+          <button type="button" className="vtx-breadcrumb-link" onClick={() => onNavigateCatalog && onNavigateCatalog("all")}>
+            Shop by Category
           </button>
-          {product.category && (
+          {product.subcategory?.slug?.startsWith("screws-") ? (
             <>
               <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
               <button
                 type="button"
                 className="vtx-breadcrumb-link"
-                onClick={() => onNavigateCatalog && onNavigateCatalog(product.category.slug)}
+                onClick={() => onNavigateCatalog && onNavigateCatalog("fasteners", "screws")}
               >
-                {product.category.name}
+                Screws
               </button>
-            </>
-          )}
-          {product.subcategory && (
-            <>
               <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
               <button
                 type="button"
                 className="vtx-breadcrumb-link"
-                onClick={() => onNavigateCatalog && onNavigateCatalog(product.category?.slug, product.subcategory.slug)}
+                onClick={() => onNavigateCatalog && onNavigateCatalog("fasteners", product.subcategory.slug)}
               >
                 {product.subcategory.name}
               </button>
+              <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
+              <button
+                type="button"
+                className="vtx-breadcrumb-link"
+                onClick={() => onNavigateCatalog && onNavigateCatalog("fasteners", product.subcategory.slug, product.slug)}
+              >
+                {product.name}
+              </button>
+              {selectedVariant?.dimensions && (
+                <>
+                  <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
+                  <span className="vtx-breadcrumb-current" aria-current="page">
+                    {selectedVariant.dimensions}
+                  </span>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {product.category && (
+                <>
+                  <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
+                  <button
+                    type="button"
+                    className="vtx-breadcrumb-link"
+                    onClick={() => onNavigateCatalog && onNavigateCatalog(product.category.slug)}
+                  >
+                    {product.category.name}
+                  </button>
+                </>
+              )}
+              {product.subcategory && (
+                <>
+                  <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
+                  <button
+                    type="button"
+                    className="vtx-breadcrumb-link"
+                    onClick={() => onNavigateCatalog && onNavigateCatalog(product.category?.slug, product.subcategory.slug)}
+                  >
+                    {product.subcategory.name}
+                  </button>
+                </>
+              )}
+              <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
+              <span className="vtx-breadcrumb-current" aria-current="page">
+                {product.name}{selectedVariant?.dimensions ? ` — ${selectedVariant.dimensions}` : ""}
+              </span>
             </>
           )}
-          <span className="vtx-breadcrumb-separator" aria-hidden="true">/</span>
-          <span className="vtx-breadcrumb-current" aria-current="page">
-            {product.name}
-          </span>
         </div>
       </nav>
 
@@ -339,22 +394,6 @@ export default function ProductDetailPage({
                 onClick={() => setIsLightboxOpen(true)}
                 title="Click to expand high-resolution view"
               >
-                {/* View Badge Overlays */}
-                <div className="vtx-view-badge-overlay">
-                  <span className="vtx-view-tag">
-                    {activeImage.label || `Angle ${activeImageIdx + 1} of ${galleryImages.length || 1}`}
-                  </span>
-                  {driveType && isFastener && (
-                    <span className="vtx-drive-tag">
-                      {driveIcon} {driveType.split(" ")[0]} Drive
-                    </span>
-                  )}
-                  {standardNorm && isFastener && (
-                    <span className="vtx-view-tag">
-                      Norm: {standardNorm}
-                    </span>
-                  )}
-                </div>
 
                 {/* Interactive Zoomable Main Image */}
                 <div className="vtx-zoom-wrapper">
@@ -440,6 +479,7 @@ export default function ProductDetailPage({
             {/* Engineering Highlights & Size Chart Link */}
             {isFastener && (
               <div className="vtx-detail-screw-highlights">
+
                 {currentDimensions && (
                   <span className="screw-pill pill-highlight">
                     Verified Size: {currentDimensions}
